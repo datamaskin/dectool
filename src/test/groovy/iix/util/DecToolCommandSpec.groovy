@@ -12,7 +12,7 @@ import spock.lang.Specification
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 
-class HelloWorldCommandSpec extends Specification {
+class DecToolCommandSpec extends Specification {
 
     @Shared @AutoCleanup ApplicationContext ctx = ApplicationContext.run(Environment.CLI, Environment.TEST)
 

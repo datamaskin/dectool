@@ -14,6 +14,7 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
+import util.toolkit.encryption.PasswordEncryption;
 import util.toolkit.stringtools.Trimmer;
 import util.toolkit.stringtools.exceptions.*;
 
@@ -46,7 +47,7 @@ public class DecToolCommand implements Runnable {
     String env_from = "TEST";
 
     @Option(names = {"-t", "-to"}, paramLabel = "db_to", description = "The database to write to", required = true)
-    String db_to = "MVR_IN";
+    String db_to = "MVR";
 
     @Option(names = {"-E", "-env_to"}, paramLabel = "env_to", description = "The database environment to write to", required = true)
     String env_to = "TEST";
@@ -298,6 +299,7 @@ public class DecToolCommand implements Runnable {
 
         java.sql.Connection conn = null;
         try {
+
             conn =  DBConnection.CreateConnection(omb.get_javaURL(), omb.getUser(), omb.getEncpPswd());
         } catch (Exception e) {
             e.printStackTrace();

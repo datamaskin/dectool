@@ -41,11 +41,24 @@ class DecToolCommandTest extends Specification {
 //        String where = "sd.request_id in ('637286085')" // working
 
         // working
-        String where = " req.state = 'MS'\n" +
+       /* String where = " req.state = 'MS'\n" +
                 "  and req.priority = 'S'\n" +
                 "  and req.no_hit in ('C',' ')\n" +
                 "  and req.product_code = '00'\n" +
-                "  and req.time_request_inserted > to_timestamp('2016-04-13 15:30:12', 'yyyy-mm-dd HH24:MI:SS')"
+                "  and req.time_request_inserted > to_timestamp('2016-04-13 15:30:12', 'yyyy-mm-dd HH24:MI:SS')"*/
+
+       /* String where = "req.state = 'MS'\n" +
+                "     and req.status between 8 and 18\n" +
+                "     and req.account not in '0999%'\n" +
+                "     and req.copy_request_type = 'O'\n" +
+                "     and req.delivery_method != 'D'\n" +
+                "     and nvl(req.no_hit,'x') != 'E'\n" +
+                "     and req.request_id IN (\n" +
+                "637286085,637311017,637311334,637278452,637278486,637280637,637309597,637309909,636375757,636375757)"*/
+
+        String where = "sd.line_no = 1\n" +
+                "   and sd.record_type = 'R'\n" +
+                "   and sd.time_report_start = (select max(time_report_start) from mvr.d_mvr_state_data_enc sm where sm.request_id = req.request_id)"
 
         DecToolCommand dtc = new DecToolCommand()
 

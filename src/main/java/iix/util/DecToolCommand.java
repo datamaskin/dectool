@@ -12,9 +12,9 @@ import org.w3c.dom.Text;
 import org.xml.sax.SAXException;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 
-import util.toolkit.encryption.PasswordEncryption;
 import util.toolkit.stringtools.Trimmer;
 import util.toolkit.stringtools.exceptions.*;
 
@@ -34,7 +34,7 @@ import java.util.List;
                 "@|green |  \\ _ _ _   _ |_   | _  _ ||@",
                 "@|green |__/(-(_| \\/|_)|_   |(_)(_)||@",
                 "@|green           / |               |@"},
-        description = "Micronaut dectool", mixinStandardHelpOptions = true)
+        description = "dectool", mixinStandardHelpOptions = true, version = "0.1")
 public class DecToolCommand implements Runnable {
 
     @Option(names = {"-o","--ora_messenger"},    paramLabel = "FILE", description = "Path to datasource ora_messenger.xml definition (default: ${DEFAULT-VALUE})", required = true)
@@ -55,14 +55,15 @@ public class DecToolCommand implements Runnable {
     /*@Option(names = {"-q", "-request_ids"}, split=",", paramLabel = "request_ids", description = "The list of request ids to return in the select", required = false)
     int[] request_ids ;*/
 
-    @Option(names = {"-v", "--verbose"}, description = "Shows some project details")
-    boolean verbose;
+    /*@Option(names = {"-v", "--verbose"}, description = "Tool description details")
+    boolean verbose=false;*/
 
     /*@Option(names = {"-w", "-where"}, description = "Decryption where clause", required = false)
     String where = "";*/
 
     @CommandLine.Parameters
     List<String> where;
+
 
     private void listNodes(Node node, String indent) {
         if (node instanceof Text) {
@@ -323,16 +324,17 @@ public class DecToolCommand implements Runnable {
         return conn;
     }
 
-    private int updateDec(String where) {
+    private int updateDec(String where) throws SQLException {
 
         StringBuilder encSelect = new StringBuilder("select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enc sd on (req.request_id = sd.request_id)  where ");
 
+        int affectedRows = 0;
         if (where != null && !where.isEmpty()) {
             OraMessengerBean from_omb = parseOraMessenger(f, db_from);
             OraMessengerBean to_omb = parseOraMessenger(f, db_to);
 
             Connection from_conn = getConnection(from_omb);
-//            Connection to_conn = getConnection(to_omb);
+            Connection to_conn = getConnection(to_omb);
 
             Statement stmt = null;
             ResultSet rs = null;
@@ -340,31 +342,39 @@ public class DecToolCommand implements Runnable {
             Blob data = null;
             byte[] _data = null;
             int request_id = 0;
-            Timestamp ts = null;
+            Timestamp trst = null;
+            Date trs = null;
             int line_no = 0;
             String state = "";
+            String recType = "";
             encSelect.append(where);
-            int affectedRows = 0;
+            affectedRows = 0;
+            int fetchSize = 0;
+            StringBuilder mvr_state = new StringBuilder("insert into MVR.D_MVR_STATE_DATA_ENH(request_id, time_report_start, line_no, state, data, time_report_start_ts,record_type) values(?,?,?,?,?,?,?)");
 
             try {
                 stmt = from_conn.createStatement();
                 rs = stmt.executeQuery(encSelect.toString());
-                while ( rs.next() ) {
+                fetchSize = rs.getFetchSize();
+                int rowSize = 0;
+                while (rs.next()) {
 
-                    data =  rs.getBlob("DATA");
+                    data = rs.getBlob("DATA");
                     _data = data.getBytes(1, (int) data.length());
                     request_id = rs.getInt("request_id");
-                    ts = rs.getTimestamp("time_report_start");
+                    trst = rs.getTimestamp("time_report_start_ts");
+                    trs = rs.getDate("time_report_start");
                     line_no = rs.getInt("line_no");
                     state = rs.getString("state");
-
+                    recType = rs.getString("record_type");
+//                    System.out.println(request_id + " " + trst + " " + line_no + " " + state);
                     byte[] dec = new byte[4000];
 
                     File props = new File("src/main/resources/trimconfig.properties");
                     try {
                         Trimmer trimmer = new Trimmer(props, "IIX");
                         dec = trimmer.trailing("IIX", _data);
-                        System.out.println(new String(dec));
+//                        System.out.println(new String(dec));
                     } catch (InitializationException e) {
                         e.printStackTrace();
                     } catch (InvalidInputException e) {
@@ -383,147 +393,47 @@ public class DecToolCommand implements Runnable {
                         e.printStackTrace();
                     }
 
-                    // request_id, time_report_start, line_no, state, data
-                    /*PreparedStatement pstm = to_conn.prepareStatement(mvr_state.toString());
+                    PreparedStatement pstm = to_conn.prepareStatement(mvr_state.toString());
 
                     pstm.setInt(1, request_id);
-                    pstm.setTimestamp(2, ts);
+                    pstm.setDate(2, trs);
                     pstm.setInt(3, line_no);
                     pstm.setString(4, state);
                     pstm.setString(5, new String(dec));
+                    pstm.setTimestamp(6, trst);
+                    pstm.setString(7, recType);
 
                     affectedRows += pstm.executeUpdate();
 
-                    System.out.println("affectedRows: " + affectedRows);
+//                    System.out.println("affectedRows: " + affectedRows);
 
-                    System.out.println("Blob length: " + data.length());*/
-//                   System.out.println(new String(_data));
+//                    System.out.println("Blob length: " + data.length());
+
+                    to_conn.commit();
+
+                    if (affectedRows > fetchSize-1)  {
+
+                    }
                 }
-
-//                to_conn.commit();
-
-//                to_conn.close();
-                from_conn.close();
 
             } catch (Exception e) {
                 e.printStackTrace();
+            } finally {
+                to_conn.close();
+                from_conn.close();
             }
 
         }
 
-        return 0;
+        return affectedRows;
     }
 
-   /*private int updateDec(int ...args) {
-
-       OraMessengerBean from_omb = parseOraMessenger(f, db_from);
-       OraMessengerBean to_omb = parseOraMessenger(f, db_to);
-
-       Connection from_conn = getConnection(from_omb);
-       Connection to_conn = getConnection(to_omb);
-
-
-       String mvrEnc = "SELECT * FROM mvr.d_mvr_state_data_enc order by request_id, line_no ";
-
-//       StringBuilder encSelect = new StringBuilder("SELECT * from mvr.d_mvr_state_data_enc");
-       StringBuilder encSelect = new StringBuilder("select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enc sd on (req.request_id = sd.request_id) WHERE sd.request_id = ");
-       String orderBy = " order by request_id, line_no";
-       int affectedRows = 0;
-       for (int arg : args) {
-           System.out.println("args: " + arg);
-           //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
-           encSelect.append("'");
-           encSelect.append(arg);
-           encSelect.append("'");
-
-           Statement stmt = null;
-           ResultSet rs = null;
-
-           Blob data = null;
-           byte[] _data = null;
-           int request_id = 0;
-           Timestamp ts = null;
-           int line_no = 0;
-           String state = "";
-           StringBuilder mvr_state =  new StringBuilder("insert into mvr.d_mvr_state_data(request_id, time_report_start, line_no, state, data) values(?,?,?,?,?)");
-
-           try  {
-               stmt = from_conn.createStatement();
-               rs = stmt.executeQuery(encSelect.toString());
-               while ( rs.next() ) {
-
-                   data =  rs.getBlob("DATA");
-                   _data = data.getBytes(1, (int) data.length());
-                   request_id = rs.getInt("request_id");
-                   ts = rs.getTimestamp("time_report_start");
-                   line_no = rs.getInt("line_no");
-                   state = rs.getString("state");
-
-                   byte[] dec = new byte[4000];
-
-                   File props = new File("src/main/resources/trimconfig.properties");
-                   try {
-                       Trimmer trimmer = new Trimmer(props, "IIX");
-                       dec = trimmer.trailing("IIX", _data);
-                       System.out.println(new String(dec));
-                   } catch (InitializationException e) {
-                       e.printStackTrace();
-                   } catch (InvalidInputException e) {
-                       e.printStackTrace();
-                   } catch (FpeDispatcherException e) {
-                       e.printStackTrace();
-                   } catch (NullInputException e) {
-                       e.printStackTrace();
-                   } catch (TimeoutException e) {
-                       e.printStackTrace();
-                   } catch (WrongDelimiterException e) {
-                       e.printStackTrace();
-                   } catch (InvalidSyntaxException e) {
-                       e.printStackTrace();
-                   } catch (ClientErrorException e) {
-                       e.printStackTrace();
-                   }
-
-                   // request_id, time_report_start, line_no, state, data
-                   PreparedStatement pstm = to_conn.prepareStatement(mvr_state.toString());
-
-                   pstm.setInt(1, request_id);
-                   pstm.setTimestamp(2, ts);
-                   pstm.setInt(3, line_no);
-                   pstm.setString(4, state);
-                   pstm.setString(5, new String(dec));
-
-                   affectedRows += pstm.executeUpdate();
-
-                   System.out.println("affectedRows: " + affectedRows);
-
-                   System.out.println("Blob length: " + data.length());
-//                   System.out.println(new String(_data));
-               }
-
-               to_conn.commit();
-               if (affectedRows == args.length) {
-                   to_conn.close();
-                   from_conn.close();
-               }
-           } catch (SQLException e) {
-               e.printStackTrace();
-           }
-
-           //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
-       }
-       return affectedRows;
-   }*/
 
     public void run() {
-        System.out.println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<iix-util>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+        System.out.println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<iix-util-dectool>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 
         DecToolCommand hwc = new DecToolCommand();
-//        hwc.updateDec(request_ids);
-
-
+        int affectedRows = 0;
         if (where != null && !where.isEmpty() ) {
             StringBuilder _where = new StringBuilder();
             int j=0;
@@ -534,15 +444,16 @@ public class DecToolCommand implements Runnable {
             }
             j++;
             _where.append(where.get(j));
-            hwc.updateDec(_where.toString());
+            try {
+                affectedRows = hwc.updateDec(_where.toString());
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         } else {
-            System.out.println("where clause error...");
+            System.out.println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< where clause error >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
         }
 
-//        System.out.println("request_ids: "  + request_ids);
+        System.out.println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Affected rows: " + affectedRows + ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 
-        if (verbose) {
-            System.out.println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<DecToolCommand details>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-        }
     }
 }

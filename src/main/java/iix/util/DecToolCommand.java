@@ -52,6 +52,12 @@ public class DecToolCommand implements Runnable {
     @Option(names = {"-E", "-env_to"}, paramLabel = "env_to", description = "The database environment to write to", required = true)
     String env_to = "TEST";
 
+    @Option(names = {"-s", "-fetchSize"}, paramLabel = "fsize", description = "The row fetch size (default: ${DEFAULT-VALUE})")
+    static int fsize = 100;
+
+//    @Option(names = {"-s", "-fetchSize"}, paramLabel = "fsize", description = "The row fetch size (default: ${DEFAULT-VALUE})", showDefaultValue = CommandLine.Help.Visibility.ALWAYS)
+//    int fsize = 100;
+
     /*@Option(names = {"-q", "-request_ids"}, split=",", paramLabel = "request_ids", description = "The list of request ids to return in the select", required = false)
     int[] request_ids ;*/
 
@@ -140,6 +146,22 @@ public class DecToolCommand implements Runnable {
     }
 
     public static void main(String[] args) throws Exception {
+        try {
+            CommandLine.ParseResult parseResult = new CommandLine(DecToolCommand.class).parseArgs(args);
+            if (!CommandLine.printHelpIfRequested(parseResult)) {
+//                System.out.println("Fetch size has matched option?: " + parseResult.hasMatchedOption('s'));
+//                System.out.println(parseResult.matchedOption('s'));
+//                System.out.println(parseResult.originalArgs());
+                int val = parseResult.matchedOptionValue('s', 100);
+                System.out.println("Matched fsize value: " + val);
+                if (parseResult.hasMatchedOption('s')) {
+                   DecToolCommand.fsize = val;
+                }
+            }
+        } catch (CommandLine.ParameterException ex) { // command line arguments could not be parsed
+            System.err.println(ex.getMessage());
+            ex.getCommandLine().usage(System.err);
+        }
         PicocliRunner.run(DecToolCommand.class, args);
     }
 
@@ -335,6 +357,7 @@ public class DecToolCommand implements Runnable {
 
             Connection from_conn = getConnection(from_omb);
             Connection to_conn = getConnection(to_omb);
+            to_conn.setAutoCommit(false);
 
             Statement stmt = null;
             ResultSet rs = null;
@@ -351,12 +374,13 @@ public class DecToolCommand implements Runnable {
             affectedRows = 0;
             int fetchSize = 0;
             StringBuilder mvr_state = new StringBuilder("insert into MVR.D_MVR_STATE_DATA_ENH(request_id, time_report_start, line_no, state, data, time_report_start_ts,record_type) values(?,?,?,?,?,?,?)");
+            PreparedStatement pstm = null;
 
             try {
                 stmt = from_conn.createStatement();
                 rs = stmt.executeQuery(encSelect.toString());
                 fetchSize = rs.getFetchSize();
-                int rowSize = 0;
+                rs.setFetchSize(fsize);
                 while (rs.next()) {
 
                     data = rs.getBlob("DATA");
@@ -393,7 +417,7 @@ public class DecToolCommand implements Runnable {
                         e.printStackTrace();
                     }
 
-                    PreparedStatement pstm = to_conn.prepareStatement(mvr_state.toString());
+                    pstm = to_conn.prepareStatement(mvr_state.toString());
 
                     pstm.setInt(1, request_id);
                     pstm.setDate(2, trs);
@@ -409,16 +433,13 @@ public class DecToolCommand implements Runnable {
 
 //                    System.out.println("Blob length: " + data.length());
 
-                    to_conn.commit();
-
-                    if (affectedRows > fetchSize-1)  {
-
-                    }
                 }
 
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
+                if (pstm != null) pstm.close();
+                to_conn.commit();
                 to_conn.close();
                 from_conn.close();
             }
@@ -428,12 +449,76 @@ public class DecToolCommand implements Runnable {
         return affectedRows;
     }
 
+    private int deleteDec() {
+        OraMessengerBean from_omb = parseOraMessenger(f, db_from);
+        OraMessengerBean to_omb = parseOraMessenger(f, db_to);
+
+        Connection from_conn = getConnection(from_omb);
+        Connection to_conn = getConnection(to_omb);
+
+        String reqIds = "select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enh sd on (req.request_id = sd.request_id)";
+
+        StringBuilder deleteReqIds = new StringBuilder("delete from mvr.d_mvr_state_data_enh where request_id in ");
+
+        Statement stmt = null;
+        ResultSet rs = null;
+        List<Integer> l_reqIds = new ArrayList<>();
+        int fetchSize = 0;
+        int affectedRows=0;
+        boolean notempty = true;
+        deleteReqIds.append("(");
+        try {
+            stmt = to_conn.createStatement();
+            rs = stmt.executeQuery(reqIds);
+            fetchSize = rs.getFetchSize();
+            rs.setFetchSize(fsize);
+
+            if (rs.next() == false) {
+                return affectedRows;
+            } else {
+                do {
+                    deleteReqIds.append(rs.getInt("request_id"));
+                    deleteReqIds.append(",");
+                } while (rs.next()); }
+
+        } catch(SQLException s) {
+            s.printStackTrace();
+        }
+
+        String _str = deleteReqIds.toString();
+
+        if (_str != null && _str.length() > 0 && _str.charAt(_str.length() - 1) == ',') {
+            _str = _str.substring(0, _str.length() - 1);
+        }
+
+        _str = _str+")";
+
+        PreparedStatement deletePrep = null;
+
+        try {
+            to_conn.setAutoCommit(true);
+            deletePrep = to_conn.prepareStatement(_str);
+            affectedRows = deletePrep.executeUpdate(_str);
+        } catch (SQLException s) {
+            s.printStackTrace();
+        } finally {
+            if (deletePrep != null)  {
+                try {
+                    deletePrep.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return affectedRows;
+    }
 
     public void run() {
         System.out.println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<iix-util-dectool>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 
         DecToolCommand hwc = new DecToolCommand();
         int affectedRows = 0;
+        int deletedRows =  0;
         if (where != null && !where.isEmpty() ) {
             StringBuilder _where = new StringBuilder();
             int j=0;
@@ -445,6 +530,7 @@ public class DecToolCommand implements Runnable {
             j++;
             _where.append(where.get(j));
             try {
+                deletedRows = hwc.deleteDec();
                 affectedRows = hwc.updateDec(_where.toString());
             } catch (SQLException e) {
                 e.printStackTrace();
@@ -453,6 +539,7 @@ public class DecToolCommand implements Runnable {
             System.out.println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< where clause error >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
         }
 
+        System.out.println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Deleted rows: " + deletedRows + ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
         System.out.println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Affected rows: " + affectedRows + ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 
     }

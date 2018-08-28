@@ -20,45 +20,117 @@ import java.sql.Blob
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.sql.SQLException
 import java.sql.Statement
 import java.sql.Timestamp
 
 class DecToolCommandTest extends Specification {
 
+    def "Test selecting request_ids as input to the deletion process" () {
+        given:
+        DecToolCommand dtc = new DecToolCommand()
+
+        File f = new File("src/main/resources/ora_messenger.xml")
+
+        String db_from =  "MVR"
+        String db_to = "MVR"
+        int size = 0;
+
+        OraMessengerBean from_omb = dtc.parseOraMessenger(f, db_from)
+        OraMessengerBean to_omb = dtc.parseOraMessenger(f, db_to)
+
+        Connection from_conn = dtc.getConnection(from_omb)
+        Connection to_conn = dtc.getConnection(to_omb)
+        to_conn.setAutoCommit(true);
+
+        String reqIds = "select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enh sd on (req.request_id = sd.request_id)"
+
+        StringBuilder deleteReqIds = new StringBuilder("delete from mvr.d_mvr_state_data_enh where request_id in ")
+
+        Statement stmt = null
+        ResultSet rs = null
+        List<Integer> l_reqIds = new ArrayList<>()
+        int fetchSize = 0
+        int reqId = 0;
+        int affectRows=0;
+        deleteReqIds.append("(")
+        try {
+            stmt = to_conn.createStatement()
+            rs = stmt.executeQuery(reqIds)
+            fetchSize = rs.getFetchSize()
+            rs.setFetchSize(5)
+
+            while (rs.next()) {
+//                l_reqIds.add(rs.getInt("request_id"))
+
+                deleteReqIds.append(rs.getInt("request_id").toString()+",")
+
+            }
+        } catch(SQLException s) {
+            s.printStackTrace()
+        }
+
+        String _str = deleteReqIds.toString()
+
+        if (_str != null && _str.length() > 0 && _str.charAt(_str.length() - 1) == ',') {
+            _str = _str.substring(0, _str.length() - 1)
+        }
+
+        _str = _str+")"
+
+        PreparedStatement deletePrep = null
+
+        boolean closed = false;
+        try {
+            deletePrep = to_conn.prepareStatement(_str)
+            affectRows = deletePrep.executeUpdate(_str)
+        } catch (SQLException s) {
+            s.printStackTrace()
+        } finally {
+            if (deletePrep != null)  {
+                deletePrep.close()
+                closed = true
+            } else {
+                throw new SQLException()
+            }
+        }
+
+        expect:
+         affectRows > 0
+        closed
+    }
+
     def "Test where clauses to be put on the DecTool CLI to fetch the request_id(s) of the encrypted data" () {
         given:
-        StringBuilder encSelect = new StringBuilder("select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enc sd on (req.request_id = sd.request_id)  where ");
-       /* String where = "req.state = 'MS' \n" +
-                "   and req.status between 8 and 18 \n" +
-                "   and req.account not in '0999%' \n" +
-                "   and req.copy_request_type = 'O' \n" +
-                "   and req.delivery_method != 'D' \n" +
-                "   and nvl(req.no_hit,'x') != 'E' \n" +
-                "   and req.request_id IN ( \n" +
-                "638096010,638096011,638096444,638096445,638096451,638096473,638096474,638096477,638096498,638096502, \n" +
-                "638144339,638144439,638144728,638144854)"*/
+//        StringBuilder encSelect = new StringBuilder("select * from mvr.d_mvr_state_data_enc enc, mvr.d_mvr_requests req where 1 = 1 ")
+        StringBuilder encSelect = new StringBuilder("select sd.* from mvr.d_mvr_state_data_enc sd join mvr.d_mvr_requests req on sd.request_id = req.request_id  where  ");
 
-//        String where = "sd.request_id in ('637286085')" // working
+            // working
+//        String where = " req.state = 'MS'\n" +
+//                "  and req.priority = 'S'\n" +
+//                "  and req.no_hit in ('C',' ')\n" +
+//                "  and req.product_code = '00'\n" +
+//                "  and req.time_request_inserted > to_timestamp('2016-04-13 15:30:12', 'yyyy-mm-dd HH24:MI:SS')"
+//
+        // working
+//        String where = "req.state = 'MS'\n" +
+//                "     and req.status between 8 and 18\n" +
+//                "     and req.account not in '0999%'\n" +
+//                "     and req.copy_request_type = 'O'\n" +
+//                "     and req.delivery_method != 'D'\n" +
+//                "     and nvl(req.no_hit,'x') != 'E'\n" +
+//                "     and req.request_id IN (\n" +
+//                "637286085,637311017,637311334,637278452,637278486,637280637,637309597,637309909,636375757,636375757)"
 
         // working
-       /* String where = " req.state = 'MS'\n" +
-                "  and req.priority = 'S'\n" +
-                "  and req.no_hit in ('C',' ')\n" +
-                "  and req.product_code = '00'\n" +
-                "  and req.time_request_inserted > to_timestamp('2016-04-13 15:30:12', 'yyyy-mm-dd HH24:MI:SS')"*/
+//        String where = "sd.line_no = 1\n" +
+//                "   and sd.record_type = 'R'\n" +
+//                "   and sd.time_report_start = (select max(time_report_start) from mvr.d_mvr_state_data_enc sm where sm.request_id = req.request_id)"
 
-       /* String where = "req.state = 'MS'\n" +
-                "     and req.status between 8 and 18\n" +
-                "     and req.account not in '0999%'\n" +
-                "     and req.copy_request_type = 'O'\n" +
-                "     and req.delivery_method != 'D'\n" +
-                "     and nvl(req.no_hit,'x') != 'E'\n" +
-                "     and req.request_id IN (\n" +
-                "637286085,637311017,637311334,637278452,637278486,637280637,637309597,637309909,636375757,636375757)"*/
-
-        String where = "sd.line_no = 1\n" +
-                "   and sd.record_type = 'R'\n" +
-                "   and sd.time_report_start = (select max(time_report_start) from mvr.d_mvr_state_data_enc sm where sm.request_id = req.request_id)"
+        // working
+        String where = "req.state = 'MS'\n" +
+                "  and sd.line_no = 1\n" +
+                "  and req.product_code != '31'"
 
         DecToolCommand dtc = new DecToolCommand()
 
@@ -92,6 +164,7 @@ class DecToolCommandTest extends Specification {
             stmt = from_conn.createStatement()
             rs = stmt.executeQuery(encSelect.toString())
             fetchSize = rs.getFetchSize()
+            rs.setFetchSize(5)
             while ( rs.next() ) {
 
                 data = rs.getBlob("DATA")
@@ -154,7 +227,6 @@ class DecToolCommandTest extends Specification {
         }
 
         expect:
-            fetchSize > 0
             affectedRows > 0
     }
 
@@ -208,7 +280,7 @@ class DecToolCommandTest extends Specification {
         _url.equals("jdbc:oracle:thin:@//DEVTIP:1521/oratestM.util")
     }
 
-    def "ParseOraMessenger test this method for the default local file: c://utils/ora_messenger.xml"() {
+    def "ParseOraMessenger test this method for the default local file: src/main/resources/ora_messenger.xmls"() {
         given:
         File f = new File("src/main/resources/ora_messenger.xml")
 

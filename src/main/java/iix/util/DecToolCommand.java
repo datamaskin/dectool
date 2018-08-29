@@ -38,19 +38,19 @@ import java.util.List;
 public class DecToolCommand implements Runnable {
 
     @Option(names = {"-o","--ora_messenger"},    paramLabel = "FILE", description = "Path to datasource ora_messenger.xml definition (default: ${DEFAULT-VALUE})", required = true)
-    File f = new File("c://utils/ora_messenger.xml");
+    static File f = new File("c://utils/ora_messenger.xml");
 
     @Option(names = {"-f", "--from "}, paramLabel = "db_from", description = "The database to read from  (default: ${DEFAULT-VALUE})", required = true)
-    String db_from = "MVR";
+    static String db_from = "MVR";
 
     @Option(names = {"-e", "--env_from"}, paramLabel = "env_from", description = "The environment of the source database (default: ${DEFAULT-VALUE})", required = true)
-    String env_from = "TEST";
+    static String env_from = "TEST";
 
     @Option(names = {"-t", "-to"}, paramLabel = "db_to", description = "The database to write to", required = true)
-    String db_to = "MVR";
+    static String db_to = "MVR";
 
     @Option(names = {"-E", "-env_to"}, paramLabel = "env_to", description = "The database environment to write to", required = true)
-    String env_to = "TEST";
+    static String env_to = "TEST";
 
     @Option(names = {"-s", "-fetchSize"}, paramLabel = "fsize", description = "The row fetch size (default: ${DEFAULT-VALUE})")
     static int fsize = 100;
@@ -149,13 +149,29 @@ public class DecToolCommand implements Runnable {
         try {
             CommandLine.ParseResult parseResult = new CommandLine(DecToolCommand.class).parseArgs(args);
             if (!CommandLine.printHelpIfRequested(parseResult)) {
-//                System.out.println("Fetch size has matched option?: " + parseResult.hasMatchedOption('s'));
-//                System.out.println(parseResult.matchedOption('s'));
-//                System.out.println(parseResult.originalArgs());
-                int val = parseResult.matchedOptionValue('s', 100);
-                System.out.println("Matched fsize value: " + val);
+                System.out.println("Fetch size has matched option?: " + parseResult.hasMatchedOption('s'));
+                System.out.println(parseResult.matchedOption('s'));
+                System.out.println(parseResult.originalArgs());
+                int sizeVal = parseResult.matchedOptionValue('s', 100);
+                File fVal = parseResult.matchedOptionValue('o', new File("c://utils/ora_messenger.xml"));
+                String dbfromVal = parseResult.matchedOptionValue('f', "MVR");
+                String envfromVal = parseResult.matchedOptionValue('e', "TEST");
+                String dbtoVal = parseResult.matchedOptionValue('t', "MVR");
+                System.out.println("Matched fsize value: " + sizeVal);
                 if (parseResult.hasMatchedOption('s')) {
-                   DecToolCommand.fsize = val;
+                   DecToolCommand.fsize = sizeVal;
+                }
+                if (parseResult.hasMatchedOption('o')) {
+                    DecToolCommand.f = fVal;
+                }
+                if (parseResult.hasMatchedOption('f')) {
+                    DecToolCommand.db_from = dbfromVal;
+                }
+                if (parseResult.hasMatchedOption('e')) {
+                    DecToolCommand.env_from = envfromVal;
+                }
+                if (parseResult.hasMatchedOption('t')) {
+                    DecToolCommand.db_to = dbtoVal;
                 }
             }
         } catch (CommandLine.ParameterException ex) { // command line arguments could not be parsed

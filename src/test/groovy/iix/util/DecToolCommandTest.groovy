@@ -102,7 +102,6 @@ class DecToolCommandTest extends Specification {
 
     def "Test where clauses to be put on the DecTool CLI to fetch the request_id(s) of the encrypted data" () {
         given:
-//        StringBuilder encSelect = new StringBuilder("select * from mvr.d_mvr_state_data_enc enc, mvr.d_mvr_requests req where 1 = 1 ")
         StringBuilder encSelect = new StringBuilder("select sd.* from mvr.d_mvr_state_data_enc sd join mvr.d_mvr_requests req on sd.request_id = req.request_id  where  ");
 
             // working
@@ -230,25 +229,6 @@ class DecToolCommandTest extends Specification {
             affectedRows > 0
     }
 
-//    def "Trimmer leading to insert some test DATA that can be decrypted since we should know the TrimConfig.properties and group e.g IIX, CVA" () {
-       /* given:
-        File f = new File("c://utils/ora_messenger.xml");
-        String sysDate = ";"
-        String lorem = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas euismod ultricies congue";
-
-        DecToolCommand hwc = new DecToolCommand();
-        OraMessengerBean _omb = hwc.parseOraMessenger(f);
-        java.sql.Connection conn = null;
-        try {
-            conn =  DBConnection.CreateConnection(_omb.get_javaURL(), _omb.getUser(), _omb.getEncpPswd());
-            sysDate = DBConnection.getDBSysdate(conn);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        expect:*/
-
-//    }
 
     def "getConnection test this method for returning a valid jdbc connection string from the ora_messenger.xml file" () {
         given:
@@ -291,7 +271,4 @@ class DecToolCommandTest extends Specification {
         oraMessenger.contains("JavaURL")
     }
 
-    def "Run"() {
-
-    }
 }

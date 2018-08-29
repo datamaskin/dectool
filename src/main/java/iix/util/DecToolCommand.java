@@ -28,13 +28,21 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/*@Command(name = "DecToolCommand",
+        header = {
+                "@|green  __                ___      |@",
+                "@|green |  \\ _ _ _   _ |_   | _  _ ||@",
+                "@|green |__/(-(_| \\/|_)|_   |(_)(_)||@",
+                "@|green           / |               |@"},
+        description = "dectool", mixinStandardHelpOptions = true, version = "0.1")*/
+
 @Command(name = "DecToolCommand",
         header = {
                 "@|green  __                ___      |@",
                 "@|green |  \\ _ _ _   _ |_   | _  _ ||@",
                 "@|green |__/(-(_| \\/|_)|_   |(_)(_)||@",
                 "@|green           / |               |@"},
-        description = "dectool", mixinStandardHelpOptions = true, version = "0.1")
+        description = "dectool ", version = "0.1")
 public class DecToolCommand implements Runnable {
 
     @Option(names = {"-o","--ora_messenger"},    paramLabel = "FILE", description = "Path to datasource ora_messenger.xml definition (default: ${DEFAULT-VALUE})", required = true)

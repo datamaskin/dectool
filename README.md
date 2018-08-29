@@ -22,15 +22,23 @@ with no command line arguments (help message is displayed)
  #####Git clone and build
  Use git bash here in Explorer ostensibly right clicking your favorite directory.
  Run: `git clone ssh://git.iix.com/git/Common/dectool.git`
- To build the tool with the tests a copy of ora_messenger.xml must be placed in the Java resources directory with the following snippet:
+ 
+ To build the tool with the tests cases a copy of ora_messenger.xml must be placed in the Java resources directory with the following snippet:
  ```
- <TnsName>oratestm.world</TnsName>
- <Schema>MVR</Schema>
- <User>MVR_IN</User>
- <Pswd></Pswd>
- <EncpPswd></EncpPswd>
- <JavaURL>jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=DEVTIP)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=oratestM.world)))</JavaURL>
+ <TEST>
+         <TnsName>oratestm.world</TnsName>
+         <Schema>MVR</Schema>
+         <User></User>
+         <Pswd></Pswd>
+         <EncpPswd></EncpPswd>
+         <JavaURL>jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=DEVTIP)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=oratestM.world)))</JavaURL>
+ </TEST>
  ```
  It is recommended that if the end user does not wish to do further development then the tool should be built without the test cases.
  To build without test cases the mvnw cmd should be:
- ./mvnw -DskipTests=true clean compile package.
+* `./mvnw -DskipTests=true clean compile package` (Linux)
+* `mvnw -DskipTests=true clean compile package` (Windows)
+* JDK: 1.8
+ 
+ ######Running dectool
+ The correct version of TrimConfig.properties for the target user must be placed in the resources directory to enable decryption.

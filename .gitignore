@@ -2,3 +2,5 @@
 lib/
 dectool (1).iml
 target/
+src/main/resources/ora_messenger.xml
+src/main/resources/TrimConfig.properties

@@ -1,0 +1,23 @@
+# DecTool args file template
+# This file is only a go-by as an example of how to run dectool CLI args from a file
+# This file resides in resources but can but put anywhere as long as the correct path is specified on the command-line
+# e.g. @src/main/resources/dectoolargs
+# The example CLI below has been commented out.
+#-e
+#TEST
+#-f
+#MVR
+#-o
+#..\..\..\..\..\..\utils\ora_messenger.xml
+#-t
+#MVR_IN
+#-E
+#TEST
+#-s
+#5
+#--
+#sd.line_no=1
+#and
+#"sd.record_type='R'"
+#and
+#'sd.time_report_start=(select max(time_report_start) from mvr.d_mvr_state_data_enc sm where sm.request_id=req.request_id)'

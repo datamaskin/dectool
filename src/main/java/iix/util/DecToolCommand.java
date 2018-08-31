@@ -12,7 +12,6 @@ import org.w3c.dom.Text;
 import org.xml.sax.SAXException;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
-import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 
 import util.toolkit.stringtools.Trimmer;
@@ -354,7 +353,7 @@ public class DecToolCommand implements Runnable {
         return conn;
     }
 
-    java.sql.Connection getConnection(String dbname, String envname) {
+    java.sql.Connection getConnection(String dbname, String envname, File f) {
 
         java.sql.Connection conn = null;
         StringBuilder connectionString = new StringBuilder("iiX.");
@@ -363,7 +362,7 @@ public class DecToolCommand implements Runnable {
         connectionString.append(envname);
 
         try {
-            conn =  DBConnection.CreateConnection(connectionString.toString());
+            conn =  DBConnection.CreateConnection(f.getAbsolutePath(), connectionString.toString());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -372,7 +371,7 @@ public class DecToolCommand implements Runnable {
 
     private int updateDec(String where) throws SQLException {
 
-        StringBuilder encSelect = new StringBuilder("select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enc sd on (req.request_id = sd.request_id)  where ");
+        StringBuilder encSelect = new StringBuilder("select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enc sd on (req.request_id = sd.request_id) where ");
 
         int affectedRows = 0;
         if (where != null && !where.isEmpty()) {
@@ -395,7 +394,10 @@ public class DecToolCommand implements Runnable {
             String state = "";
             String recType = "";
             encSelect.append(where);
-            affectedRows = 0;
+            encSelect.append("FETCH FIRST ");
+            encSelect.append(fsize);
+            encSelect.append(" ROWS ONLY");
+
             int fetchSize = 0;
             StringBuilder mvr_state = new StringBuilder("insert into MVR.D_MVR_STATE_DATA_ENH(request_id, time_report_start, line_no, state, data, time_report_start_ts,record_type) values(?,?,?,?,?,?,?)");
             PreparedStatement pstm = null;
@@ -420,7 +422,8 @@ public class DecToolCommand implements Runnable {
 
                     File props = new File("src/main/resources/trimconfig.properties");
                     try {
-                        Trimmer trimmer = new Trimmer(props, "IIX");
+//                        Trimmer trimmer = new Trimmer(props, "IIX");
+                        Trimmer trimmer = new Trimmer("IIX");
                         dec = trimmer.trailing("IIX", _data);
 //                        System.out.println(new String(dec));
                     } catch (InitializationException e) {
@@ -473,29 +476,32 @@ public class DecToolCommand implements Runnable {
         return affectedRows;
     }
 
-    private int deleteDec() {
+    private int deleteDec(String where) {
         OraMessengerBean from_omb = parseOraMessenger(f, db_from);
         OraMessengerBean to_omb = parseOraMessenger(f, db_to);
 
         Connection from_conn = getConnection(from_omb);
         Connection to_conn = getConnection(to_omb);
 
-        String reqIds = "select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enh sd on (req.request_id = sd.request_id)";
+//        String reqIds = "select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enh sd on (req.request_id = sd.request_id)";
+        StringBuilder reqIds = new StringBuilder("select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enc sd on (req.request_id = sd.request_id) where ");
+
 
         StringBuilder deleteReqIds = new StringBuilder("delete from mvr.d_mvr_state_data_enh where request_id in ");
 
         Statement stmt = null;
         ResultSet rs = null;
-        List<Integer> l_reqIds = new ArrayList<>();
-        int fetchSize = 0;
+
         int affectedRows=0;
-        boolean notempty = true;
+        reqIds.append(where);
+        reqIds.append(" FETCH FIRST ");
+        reqIds.append(fsize);
+        reqIds.append(" ROWS ONLY");
+
         deleteReqIds.append("(");
         try {
             stmt = to_conn.createStatement();
-            rs = stmt.executeQuery(reqIds);
-            fetchSize = rs.getFetchSize();
-            rs.setFetchSize(fsize);
+            rs = stmt.executeQuery(reqIds.toString());
 
             if (rs.next() == false) {
                 return affectedRows;
@@ -554,7 +560,7 @@ public class DecToolCommand implements Runnable {
             j++;
             _where.append(where.get(j));
             try {
-                deletedRows = hwc.deleteDec();
+                deletedRows = hwc.deleteDec(_where.toString());
                 affectedRows = hwc.updateDec(_where.toString());
             } catch (SQLException e) {
                 e.printStackTrace();

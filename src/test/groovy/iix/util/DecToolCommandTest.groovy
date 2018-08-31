@@ -55,7 +55,7 @@ class DecToolCommandTest extends Specification {
         reqIds.append(" FETCH FIRST ")
         reqIds.append(fetchSize)
         reqIds.append(" ROWS ONLY")
-        int reqId = 0
+
         int affectedRows=0
         deleteReqIds.append("(")
         try {
@@ -145,8 +145,11 @@ class DecToolCommandTest extends Specification {
         OraMessengerBean from_omb = dtc.parseOraMessenger(f, db_from)
         OraMessengerBean to_omb = dtc.parseOraMessenger(f, db_to)
 
-        Connection from_conn = dtc.getConnection(from_omb)
-        Connection to_conn = dtc.getConnection(to_omb)
+//        Connection from_conn = dtc.getConnection(from_omb)
+//        Connection to_conn = dtc.getConnection(to_omb)
+
+        Connection from_conn = dtc.getConnection(db_from, "TEST", f)
+        Connection to_conn = dtc.getConnection(db_to, "TEST", f)
 
         Statement stmt = null
         ResultSet rs = null
@@ -246,7 +249,7 @@ class DecToolCommandTest extends Specification {
         OraMessengerBean _omb = hwc.parseOraMessenger(f, "MVR")
         java.sql.Connection conn = null
         try {
-
+//            conn = hwc.getConnection("MVR", "TEST", f)
             conn =  DBConnection.CreateConnection(_omb.get_javaURL(), _omb.getUser(), _omb.getEncpPswd())
             sysDate = DBConnection.getDBSysdate(conn)
         } catch (Exception e) {

@@ -43,20 +43,24 @@ class DecToolCommandTest extends Specification {
         Connection to_conn = dtc.getConnection(to_omb)
         to_conn.setAutoCommit(true);
 
-        String reqIds = "select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enh sd on (req.request_id = sd.request_id)"
+//        String reqIds = "select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enh sd on (req.request_id = sd.request_id)"
+        StringBuilder reqIds = new StringBuilder("select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enc sd on (req.request_id = sd.request_id) where req.state = 'MS' and sd.line_no = 1 and req.product_code != '31'")
 
         StringBuilder deleteReqIds = new StringBuilder("delete from mvr.d_mvr_state_data_enh where request_id in ")
 
         Statement stmt = null
         ResultSet rs = null
         List<Integer> l_reqIds = new ArrayList<>()
-        int fetchSize = 0
-        int reqId = 0;
-        int affectRows=0;
+        int fetchSize = 5
+        reqIds.append(" FETCH FIRST ")
+        reqIds.append(fetchSize)
+        reqIds.append(" ROWS ONLY")
+        int reqId = 0
+        int affectedRows=0
         deleteReqIds.append("(")
         try {
             stmt = to_conn.createStatement()
-            rs = stmt.executeQuery(reqIds)
+            rs = stmt.executeQuery(reqIds.toString())
             fetchSize = rs.getFetchSize()
             rs.setFetchSize(5)
 
@@ -83,7 +87,7 @@ class DecToolCommandTest extends Specification {
         boolean closed = false;
         try {
             deletePrep = to_conn.prepareStatement(_str)
-            affectRows = deletePrep.executeUpdate(_str)
+            affectedRows = deletePrep.executeUpdate(_str)
         } catch (SQLException s) {
             s.printStackTrace()
         } finally {
@@ -96,13 +100,13 @@ class DecToolCommandTest extends Specification {
         }
 
         expect:
-         affectRows > 0
+        affectedRows > 0
         closed
     }
 
     def "Test where clauses to be put on the DecTool CLI to fetch the request_id(s) of the encrypted data" () {
         given:
-        StringBuilder encSelect = new StringBuilder("select sd.* from mvr.d_mvr_state_data_enc sd join mvr.d_mvr_requests req on sd.request_id = req.request_id  where  ");
+        StringBuilder encSelect = new StringBuilder("select sd.* from mvr.d_mvr_state_data_enc sd join mvr.d_mvr_requests req on sd.request_id = req.request_id where ");
 
             // working
 //        String where = " req.state = 'MS'\n" +
@@ -155,15 +159,17 @@ class DecToolCommandTest extends Specification {
         int line_no = 0
         String state = ""
         String recType = ""
+        int fetchSize =  5
         encSelect.append(where)
+        encSelect.append("FETCH FIRST ")
+        encSelect.append(fetchSize)
+        encSelect.append(" ROWS ONLY")
         int affectedRows = 0
-        int fetchSize =  0
         StringBuilder mvr_state =  new StringBuilder("insert into MVR.D_MVR_STATE_DATA_ENH(request_id, time_report_start, line_no, state, data, time_report_start_ts,record_type) values(?,?,?,?,?,?,?)");
         try {
             stmt = from_conn.createStatement()
             rs = stmt.executeQuery(encSelect.toString())
-            fetchSize = rs.getFetchSize()
-            rs.setFetchSize(5)
+
             while ( rs.next() ) {
 
                 data = rs.getBlob("DATA")
@@ -179,7 +185,8 @@ class DecToolCommandTest extends Specification {
 
                 File props = new File("src/main/resources/trimconfig.properties")
                 try {
-                    Trimmer trimmer = new Trimmer(props, "IIX")
+//                    Trimmer trimmer = new Trimmer(props, "IIX")
+                    Trimmer trimmer = new Trimmer( "IIX")
                     dec = trimmer.trailing("IIX", _data)
                     System.out.println(new String(dec))
                 } catch (InitializationException e) {

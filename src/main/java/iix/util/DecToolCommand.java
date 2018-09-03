@@ -362,14 +362,14 @@ public class DecToolCommand implements Runnable {
         connectionString.append(envname);
 
         try {
-            conn =  DBConnection.CreateConnection(f.getAbsolutePath(), connectionString.toString());
+            conn =  DBConnection.CreateConnection(connectionString.toString());
         } catch (Exception e) {
             e.printStackTrace();
         }
         return conn;
     }
 
-    private int updateDec(String where) throws SQLException {
+    private int updateDec(String where) throws Exception {
 
         StringBuilder encSelect = new StringBuilder("select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enc sd on (req.request_id = sd.request_id) where ");
 
@@ -402,6 +402,7 @@ public class DecToolCommand implements Runnable {
             StringBuilder mvr_state = new StringBuilder("insert into MVR.D_MVR_STATE_DATA_ENH(request_id, time_report_start, line_no, state, data, time_report_start_ts,record_type) values(?,?,?,?,?,?,?)");
             PreparedStatement pstm = null;
 
+            Trimmer trimmer = null;
             try {
                 stmt = from_conn.createStatement();
                 rs = stmt.executeQuery(encSelect.toString());
@@ -421,7 +422,7 @@ public class DecToolCommand implements Runnable {
                     byte[] dec = new byte[4000];
 
                     File props = new File("src/main/resources/trimconfig.properties");
-                    try {
+                    /*try {
 //                        Trimmer trimmer = new Trimmer(props, "IIX");
                         Trimmer trimmer = new Trimmer("IIX");
                         dec = trimmer.trailing("IIX", _data);
@@ -442,7 +443,11 @@ public class DecToolCommand implements Runnable {
                         e.printStackTrace();
                     } catch (ClientErrorException e) {
                         e.printStackTrace();
-                    }
+                    }*/
+
+                    trimmer = new Trimmer("IIX");
+
+                    dec = trimmer.trailing("IIX", _data);
 
                     pstm = to_conn.prepareStatement(mvr_state.toString());
 
@@ -459,9 +464,7 @@ public class DecToolCommand implements Runnable {
 //                    System.out.println("affectedRows: " + affectedRows);
 
 //                    System.out.println("Blob length: " + data.length());
-
                 }
-
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
@@ -469,8 +472,8 @@ public class DecToolCommand implements Runnable {
                 to_conn.commit();
                 to_conn.close();
                 from_conn.close();
+                if (trimmer == null) throw new InitializationException();
             }
-
         }
 
         return affectedRows;
@@ -503,7 +506,7 @@ public class DecToolCommand implements Runnable {
             stmt = to_conn.createStatement();
             rs = stmt.executeQuery(reqIds.toString());
 
-            if (rs.next() == false) {
+            if (rs.next()) {
                 return affectedRows;
             } else {
                 do {
@@ -562,7 +565,7 @@ public class DecToolCommand implements Runnable {
             try {
                 deletedRows = hwc.deleteDec(_where.toString());
                 affectedRows = hwc.updateDec(_where.toString());
-            } catch (SQLException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         } else {

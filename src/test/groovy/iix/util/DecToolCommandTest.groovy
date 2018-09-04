@@ -262,7 +262,7 @@ class DecToolCommandTest extends Specification {
         trimmer
     }
 
-    def "getConnection test this method for returning a valid jdbc connection string from the ora_messenger.xml file" () {
+    /*def "getConnection test this method for returning a valid jdbc connection string from the ora_messenger.xml file" () {
         given:
         File f = new File("src/main/resources/ora_messenger.xml")
         String sysDate = ";"
@@ -280,7 +280,7 @@ class DecToolCommandTest extends Specification {
 
         expect:
         sysDate.contains("Sysdate")
-    }
+    }*/
 
     def "ParseJavaURL test this method for the string extracted from the right side of the '@' sign from JavaURl"() {
         given:
@@ -292,7 +292,7 @@ class DecToolCommandTest extends Specification {
         _url.equals("jdbc:oracle:thin:@//DEVTIP:1521/oratestM.util")
     }
 
-    def "ParseOraMessenger test this method for the default local file: src/main/resources/ora_messenger.xmls"() {
+    /*def "ParseOraMessenger test this method for the default local file: src/main/resources/ora_messenger.xmls"() {
         given:
         File f = new File("src/main/resources/ora_messenger.xml")
 
@@ -301,6 +301,6 @@ class DecToolCommandTest extends Specification {
 
         expect:
         oraMessenger.contains("JavaURL")
-    }
+    }*/
 
 }

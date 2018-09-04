@@ -41,7 +41,7 @@ import java.util.List;
                 "@|green |  \\ _ _ _   _ |_   | _  _ ||@",
                 "@|green |__/(-(_| \\/|_)|_   |(_)(_)||@",
                 "@|green           / |               |@"},
-        description = "dectool ", version = "0.1")
+        description = "dectool: decrypts using @args file and path (see README.md) ", version = "0.1")
 public class DecToolCommand implements Runnable {
 
     @Option(names = {"-o","--ora_messenger"},    paramLabel = "FILE", description = "Path to datasource ora_messenger.xml definition (default: ${DEFAULT-VALUE})", required = true)

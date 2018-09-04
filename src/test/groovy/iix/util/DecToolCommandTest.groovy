@@ -1,11 +1,8 @@
 package iix.util
 
-import iix.util.DecToolCommand
-import iix.util.DecToolCommand
-import iix.util.OraMessengerBean
+
 import iixToolkit.db.connection.DBConnection
 import spock.lang.Specification
-import util.toolkit.encryption.PasswordEncryption
 import util.toolkit.stringtools.Trimmer
 import util.toolkit.stringtools.exceptions.ClientErrorException
 import util.toolkit.stringtools.exceptions.FpeDispatcherException
@@ -36,11 +33,26 @@ class DecToolCommandTest extends Specification {
         String db_to = "MVR"
         int size = 0;
 
-        OraMessengerBean from_omb = dtc.parseOraMessenger(f, db_from)
-        OraMessengerBean to_omb = dtc.parseOraMessenger(f, db_to)
+//        OraMessengerBean from_omb = dtc.parseOraMessenger(f, db_from)
+//        OraMessengerBean to_omb = dtc.parseOraMessenger(f, db_to)
 
-        Connection from_conn = dtc.getConnection(from_omb)
-        Connection to_conn = dtc.getConnection(to_omb)
+//        Connection from_conn = dtc.getConnection(from_omb)
+//        Connection to_conn = dtc.getConnection(to_omb)
+
+        String s = ""
+        String[] r = null
+
+        DBConnection dbConn = new DBConnection()
+        s = "DBConnect.iiX.MVR.TEST"
+        r = dbConn.getConnectionParams(s)
+        System.out.println("Connection:" + s + " username=" + r[0] + " pw_plaintext=" + r[1] + " pw_encrypt=" + r[2] + " url=" + r[3])
+
+//        Connection from_conn = dtc.getConnection(from_omb)
+//        Connection to_conn = dtc.getConnection(to_omb)
+
+//        Connection from_conn = dtc.getConnection(dtc.parseJavaURL(r[3]), r[0], r[2])
+        Connection to_conn = dtc.getConnection(dtc.parseJavaURL(r[3]), r[0], r[2])
+
         to_conn.setAutoCommit(true);
 
 //        String reqIds = "select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enh sd on (req.request_id = sd.request_id)"
@@ -61,17 +73,12 @@ class DecToolCommandTest extends Specification {
         try {
             stmt = to_conn.createStatement()
             rs = stmt.executeQuery(reqIds.toString())
-            fetchSize = rs.getFetchSize()
-            rs.setFetchSize(5)
 
             while (rs.next()) {
-//                l_reqIds.add(rs.getInt("request_id"))
-
                 deleteReqIds.append(rs.getInt("request_id").toString()+",")
-
             }
-        } catch(SQLException s) {
-            s.printStackTrace()
+        } catch(SQLException sql) {
+            sql.printStackTrace()
         }
 
         String _str = deleteReqIds.toString()
@@ -88,8 +95,8 @@ class DecToolCommandTest extends Specification {
         try {
             deletePrep = to_conn.prepareStatement(_str)
             affectedRows = deletePrep.executeUpdate(_str)
-        } catch (SQLException s) {
-            s.printStackTrace()
+        } catch (SQLException sql) {
+            sql.printStackTrace()
         } finally {
             if (deletePrep != null)  {
                 deletePrep.close()
@@ -139,17 +146,25 @@ class DecToolCommandTest extends Specification {
 
         File f = new File("src/main/resources/ora_messenger.xml")
 
-        String db_from =  "MVR"
+        /*String db_from =  "MVR"
         String db_to = "MVR"
 
         OraMessengerBean from_omb = dtc.parseOraMessenger(f, db_from)
-        OraMessengerBean to_omb = dtc.parseOraMessenger(f, db_to)
+        OraMessengerBean to_omb = dtc.parseOraMessenger(f, db_to)*/
+
+        String s = ""
+        String[] r = null
+
+        DBConnection dbConn = new DBConnection()
+        s = "DBConnect.iiX.MVR.TEST"
+        r = dbConn.getConnectionParams(s)
+        System.out.println("Connection:" + s + " username=" + r[0] + " pw_plaintext=" + r[1] + " pw_encrypt=" + r[2] + " url=" + r[3])
 
 //        Connection from_conn = dtc.getConnection(from_omb)
 //        Connection to_conn = dtc.getConnection(to_omb)
 
-        Connection from_conn = dtc.getConnection(db_from, "TEST", f)
-        Connection to_conn = dtc.getConnection(db_to, "TEST", f)
+        Connection from_conn = dtc.getConnection(dtc.parseJavaURL(r[3]), r[0], r[2])
+        Connection to_conn = dtc.getConnection(dtc.parseJavaURL(r[3]), r[0], r[2])
 
         Statement stmt = null
         ResultSet rs = null
@@ -186,7 +201,7 @@ class DecToolCommandTest extends Specification {
                 System.out.println(request_id + " " + trst + " " + line_no + " " + state)
                 byte[] dec = new byte[4000]
 
-                File props = new File("src/main/resources/trimconfig.properties")
+//                File props = new File("src/main/resources/trimconfig.properties")
                 try {
 //                    Trimmer trimmer = new Trimmer(props, "IIX")
                     Trimmer trimmer = new Trimmer( "IIX")
@@ -239,6 +254,13 @@ class DecToolCommandTest extends Specification {
             affectedRows > 0
     }
 
+    def "Test the Trimmer instance for processing TrimConfig.properties correctly" () {
+        given:
+        Trimmer trimmer = new Trimmer("IIX")
+
+        expect:
+        trimmer
+    }
 
     def "getConnection test this method for returning a valid jdbc connection string from the ora_messenger.xml file" () {
         given:

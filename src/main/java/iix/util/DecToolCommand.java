@@ -59,7 +59,7 @@ public class DecToolCommand implements Runnable {
     @Option(names = {"-E", "-env_to"}, paramLabel = "env_to", description = "The database environment to write to", required = true)
     static String env_to = "TEST";
 
-    @Option(names = {"-s", "-fetchSize"}, paramLabel = "fsize", description = "The row fetch size (default: ${DEFAULT-VALUE})")
+    @Option(names = {"-s", "-fetchSize"}, paramLabel = "fsize", description = "The row fetch first size (default: ${DEFAULT-VALUE})")
     static int fsize = 100;
 
 //    @Option(names = {"-s", "-fetchSize"}, paramLabel = "fsize", description = "The row fetch size (default: ${DEFAULT-VALUE})", showDefaultValue = CommandLine.Help.Visibility.ALWAYS)

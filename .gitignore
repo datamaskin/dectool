@@ -4,3 +4,6 @@ dectool (1).iml
 target/
 src/main/resources/ora_messenger.xml
 src/main/resources/TrimConfig.properties
+AUTHORS
+src/main/resources/where2args
+src/main/resources/where4args

@@ -353,16 +353,12 @@ public class DecToolCommand implements Runnable {
         return conn;
     }
 
-    java.sql.Connection getConnection(String dbname, String envname, File f) {
+    java.sql.Connection getConnection(String inconn, String inuser, String pw) {
 
         java.sql.Connection conn = null;
-        StringBuilder connectionString = new StringBuilder("iiX.");
-        connectionString.append(dbname);
-        connectionString.append(".");
-        connectionString.append(envname);
 
         try {
-            conn =  DBConnection.CreateConnection(connectionString.toString());
+            conn =  DBConnection.CreateConnection(inconn, inuser, pw);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -375,11 +371,28 @@ public class DecToolCommand implements Runnable {
 
         int affectedRows = 0;
         if (where != null && !where.isEmpty()) {
-            OraMessengerBean from_omb = parseOraMessenger(f, db_from);
+            /*OraMessengerBean from_omb = parseOraMessenger(f, db_from);
             OraMessengerBean to_omb = parseOraMessenger(f, db_to);
 
             Connection from_conn = getConnection(from_omb);
-            Connection to_conn = getConnection(to_omb);
+            Connection to_conn = getConnection(to_omb);*/
+
+            StringBuilder s = new StringBuilder("DBConnect.iiX.");
+            s.append(db_from);
+            s.append(".");
+            s.append(env_from);
+
+            StringBuilder _s = new StringBuilder("DBConnect.iiX.");
+            _s.append(db_to);
+            _s.append(".");
+            _s.append(env_to);
+
+            String[] r = DBConnection.getConnectionParams(s.toString());
+            String[] _r = DBConnection.getConnectionParams(_s.toString());
+
+            Connection to_conn = getConnection(parseJavaURL(_r[3]), _r[0], r[2]);
+            Connection from_conn = getConnection(parseJavaURL(r[3]), r[0], r[2]);
+
             to_conn.setAutoCommit(false);
 
             Statement stmt = null;
@@ -398,7 +411,6 @@ public class DecToolCommand implements Runnable {
             encSelect.append(fsize);
             encSelect.append(" ROWS ONLY");
 
-            int fetchSize = 0;
             StringBuilder mvr_state = new StringBuilder("insert into MVR.D_MVR_STATE_DATA_ENH(request_id, time_report_start, line_no, state, data, time_report_start_ts,record_type) values(?,?,?,?,?,?,?)");
             PreparedStatement pstm = null;
 
@@ -406,8 +418,7 @@ public class DecToolCommand implements Runnable {
             try {
                 stmt = from_conn.createStatement();
                 rs = stmt.executeQuery(encSelect.toString());
-                fetchSize = rs.getFetchSize();
-                rs.setFetchSize(fsize);
+
                 while (rs.next()) {
 
                     data = rs.getBlob("DATA");
@@ -421,7 +432,7 @@ public class DecToolCommand implements Runnable {
 //                    System.out.println(request_id + " " + trst + " " + line_no + " " + state);
                     byte[] dec = new byte[4000];
 
-                    File props = new File("src/main/resources/trimconfig.properties");
+//                    File props = new File("src/main/resources/trimconfig.properties");
                     /*try {
 //                        Trimmer trimmer = new Trimmer(props, "IIX");
                         Trimmer trimmer = new Trimmer("IIX");
@@ -472,23 +483,32 @@ public class DecToolCommand implements Runnable {
                 to_conn.commit();
                 to_conn.close();
                 from_conn.close();
-                if (trimmer == null) throw new InitializationException();
+                if (trimmer == null)
+                    throw new InitializationException();
             }
         }
 
         return affectedRows;
     }
 
-    private int deleteDec(String where) {
-        OraMessengerBean from_omb = parseOraMessenger(f, db_from);
+    private int deleteDec(String where) throws Exception {
+        /*OraMessengerBean from_omb = parseOraMessenger(f, db_from);
         OraMessengerBean to_omb = parseOraMessenger(f, db_to);
 
         Connection from_conn = getConnection(from_omb);
-        Connection to_conn = getConnection(to_omb);
+        Connection to_conn = getConnection(to_omb);*/
 
 //        String reqIds = "select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enh sd on (req.request_id = sd.request_id)";
         StringBuilder reqIds = new StringBuilder("select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enc sd on (req.request_id = sd.request_id) where ");
 
+        StringBuilder s = new StringBuilder("DBConnect.iiX.");
+        s.append(db_to);
+        s.append(".");
+        s.append(env_to);
+
+        String[] r = DBConnection.getConnectionParams(s.toString());
+
+        Connection to_conn = getConnection(parseJavaURL(r[3]), r[0], r[2]);
 
         StringBuilder deleteReqIds = new StringBuilder("delete from mvr.d_mvr_state_data_enh where request_id in ");
 
@@ -506,16 +526,21 @@ public class DecToolCommand implements Runnable {
             stmt = to_conn.createStatement();
             rs = stmt.executeQuery(reqIds.toString());
 
-            if (rs.next()) {
+            while (rs.next()) {
+                deleteReqIds.append(rs.getInt("request_id"));
+                deleteReqIds.append(",");
+            }
+
+            /*if (rs.next()) {
                 return affectedRows;
             } else {
                 do {
                     deleteReqIds.append(rs.getInt("request_id"));
                     deleteReqIds.append(",");
-                } while (rs.next()); }
+                } while (rs.next()); }*/
 
-        } catch(SQLException s) {
-            s.printStackTrace();
+        } catch(SQLException sql) {
+            sql.printStackTrace();
         }
 
         String _str = deleteReqIds.toString();
@@ -532,8 +557,8 @@ public class DecToolCommand implements Runnable {
             to_conn.setAutoCommit(true);
             deletePrep = to_conn.prepareStatement(_str);
             affectedRows = deletePrep.executeUpdate(_str);
-        } catch (SQLException s) {
-            s.printStackTrace();
+        } catch (SQLException sql) {
+            sql.printStackTrace();
         } finally {
             if (deletePrep != null)  {
                 try {

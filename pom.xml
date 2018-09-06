@@ -112,6 +112,12 @@
       <artifactId>postgresql</artifactId>
       <version>42.2.4</version>
     </dependency>
+    <dependency>
+      <groupId>oracle.jdbc.12c</groupId>
+      <artifactId>ojdbc7</artifactId>
+      <version>12.1.0.1</version>
+      <scope>runtime</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>

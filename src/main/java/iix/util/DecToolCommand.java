@@ -25,8 +25,37 @@ import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+
+class TrimmerSingleton
+{
+    // static variable trimmer_instance of type TrimmerSingleton
+    private static TrimmerSingleton trimmer_instance = null;
+
+    public Trimmer trimmer;
+
+    // private constructor restricted to this class itself
+    private TrimmerSingleton()
+    {
+        try {
+            trimmer = new Trimmer("IIX");
+        } catch (InvalidInputException e) {
+            e.printStackTrace();
+        } catch (InitializationException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static TrimmerSingleton getInstance()
+    {
+        if (trimmer_instance == null)
+            trimmer_instance = new TrimmerSingleton();
+
+        return trimmer_instance;
+    }
+}
 /*@Command(name = "DecToolCommand",
         header = {
                 "@|green  __                ___      |@",
@@ -75,8 +104,8 @@ public class DecToolCommand implements Runnable {
     String where = "";*/
 
     @CommandLine.Parameters
+    private
     List<String> where;
-
 
     private void listNodes(Node node, String indent) {
         if (node instanceof Text) {
@@ -353,7 +382,7 @@ public class DecToolCommand implements Runnable {
         return conn;
     }
 
-    java.sql.Connection getConnection(String inconn, String inuser, String pw) {
+    private java.sql.Connection getConnection(String inconn, String inuser, String pw) {
 
         java.sql.Connection conn = null;
 
@@ -365,17 +394,54 @@ public class DecToolCommand implements Runnable {
         return conn;
     }
 
-    private int updateDec(String where) throws Exception {
+    java.sql.Connection getConnection(String inconn) {
+
+        java.sql.Connection conn = null;
+
+        try {
+            conn =  DBConnection.CreateConnection(inconn);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return conn;
+    }
+
+    List<Integer> getReqIds(String where) {
+
+        StringBuilder encSelect = new StringBuilder("select sd.* from mvr.d_mvr_state_data_enc sd join mvr.d_mvr_requests req on sd.request_id = req.request_id where ");
+
+        String s = "DBConnect.iiX.MVR.TEST";
+        DecToolCommand dtc = new DecToolCommand();
+        Connection from_conn = dtc.getConnection(s);
+        Statement stmt = null;
+        ResultSet rs = null;
+        encSelect.append(where);
+        encSelect.append("FETCH FIRST ");
+        encSelect.append(fsize);
+        encSelect.append(" ROWS ONLY");
+        List<Integer> l_reqids = new ArrayList<>();
+
+        try {
+            stmt = from_conn.createStatement();
+            rs = stmt.executeQuery(encSelect.toString());
+            while (rs.next()) {
+                l_reqids.add(rs.getInt("request_id"));
+            }
+            from_conn.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return l_reqids;
+    }
+
+    private int updateDec(int request_id) throws Exception {
 
         StringBuilder encSelect = new StringBuilder("select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enc sd on (req.request_id = sd.request_id) where ");
+        String _encSelect = "select * from mvr.d_mvr_state_data_enc where request_id = " + Integer.toString(request_id);
 
         int affectedRows = 0;
-        if (where != null && !where.isEmpty()) {
-            /*OraMessengerBean from_omb = parseOraMessenger(f, db_from);
-            OraMessengerBean to_omb = parseOraMessenger(f, db_to);
-
-            Connection from_conn = getConnection(from_omb);
-            Connection to_conn = getConnection(to_omb);*/
+        if (request_id >= 0) {
 
             StringBuilder s = new StringBuilder("DBConnect.iiX.");
             s.append(db_from);
@@ -387,11 +453,8 @@ public class DecToolCommand implements Runnable {
             _s.append(".");
             _s.append(env_to);
 
-            String[] r = DBConnection.getConnectionParams(s.toString());
-            String[] _r = DBConnection.getConnectionParams(_s.toString());
-
-            Connection to_conn = getConnection(parseJavaURL(_r[3]), _r[0], r[2]);
-            Connection from_conn = getConnection(parseJavaURL(r[3]), r[0], r[2]);
+            Connection from_conn = getConnection(s.toString());
+            Connection to_conn = getConnection(_s.toString());
 
             to_conn.setAutoCommit(false);
 
@@ -400,13 +463,12 @@ public class DecToolCommand implements Runnable {
 
             Blob data = null;
             byte[] _data = null;
-            int request_id = 0;
             Timestamp trst = null;
             Date trs = null;
             int line_no = 0;
             String state = "";
             String recType = "";
-            encSelect.append(where);
+            encSelect.append(request_id);
             encSelect.append("FETCH FIRST ");
             encSelect.append(fsize);
             encSelect.append(" ROWS ONLY");
@@ -414,12 +476,13 @@ public class DecToolCommand implements Runnable {
             StringBuilder mvr_state = new StringBuilder("insert into MVR.D_MVR_STATE_DATA_ENH(request_id, time_report_start, line_no, state, data, time_report_start_ts,record_type) values(?,?,?,?,?,?,?)");
             PreparedStatement pstm = null;
 
-            Trimmer trimmer = null;
+            TrimmerSingleton ts = TrimmerSingleton.getInstance();
+
             try {
                 stmt = from_conn.createStatement();
-                rs = stmt.executeQuery(encSelect.toString());
+                rs = stmt.executeQuery(_encSelect);
 
-                while (rs.next()) {
+                if (rs.next()) {
 
                     data = rs.getBlob("DATA");
                     _data = data.getBytes(1, (int) data.length());
@@ -430,35 +493,11 @@ public class DecToolCommand implements Runnable {
                     state = rs.getString("state");
                     recType = rs.getString("record_type");
 //                    System.out.println(request_id + " " + trst + " " + line_no + " " + state);
-                    byte[] dec = new byte[4000];
+                    byte dec[] = new byte[4000];
+                    Arrays.fill(dec, (byte)8);
 
-//                    File props = new File("src/main/resources/trimconfig.properties");
-                    /*try {
-//                        Trimmer trimmer = new Trimmer(props, "IIX");
-                        Trimmer trimmer = new Trimmer("IIX");
-                        dec = trimmer.trailing("IIX", _data);
-//                        System.out.println(new String(dec));
-                    } catch (InitializationException e) {
-                        e.printStackTrace();
-                    } catch (InvalidInputException e) {
-                        e.printStackTrace();
-                    } catch (FpeDispatcherException e) {
-                        e.printStackTrace();
-                    } catch (NullInputException e) {
-                        e.printStackTrace();
-                    } catch (TimeoutException e) {
-                        e.printStackTrace();
-                    } catch (WrongDelimiterException e) {
-                        e.printStackTrace();
-                    } catch (InvalidSyntaxException e) {
-                        e.printStackTrace();
-                    } catch (ClientErrorException e) {
-                        e.printStackTrace();
-                    }*/
 
-                    trimmer = new Trimmer("IIX");
-
-                    dec = trimmer.trailing("IIX", _data);
+                    dec = ts.trimmer.trailing("IIX", _data);
 
                     pstm = to_conn.prepareStatement(mvr_state.toString());
 
@@ -483,8 +522,6 @@ public class DecToolCommand implements Runnable {
                 to_conn.commit();
                 to_conn.close();
                 from_conn.close();
-                if (trimmer == null)
-                    throw new InitializationException();
             }
         }
 
@@ -492,11 +529,6 @@ public class DecToolCommand implements Runnable {
     }
 
     private int deleteDec(String where) throws Exception {
-        /*OraMessengerBean from_omb = parseOraMessenger(f, db_from);
-        OraMessengerBean to_omb = parseOraMessenger(f, db_to);
-
-        Connection from_conn = getConnection(from_omb);
-        Connection to_conn = getConnection(to_omb);*/
 
 //        String reqIds = "select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enh sd on (req.request_id = sd.request_id)";
         StringBuilder reqIds = new StringBuilder("select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enc sd on (req.request_id = sd.request_id) where ");
@@ -587,9 +619,13 @@ public class DecToolCommand implements Runnable {
             }
             j++;
             _where.append(where.get(j));
+            List<Integer> rIds = hwc.getReqIds(_where.toString());
+
             try {
-                deletedRows = hwc.deleteDec(_where.toString());
-                affectedRows = hwc.updateDec(_where.toString());
+                for (int rId: rIds) {
+//                    deletedRows = hwc.deleteDec(_where.toString());
+                    affectedRows = hwc.updateDec(rId);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }

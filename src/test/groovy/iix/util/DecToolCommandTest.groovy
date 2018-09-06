@@ -27,17 +27,9 @@ class DecToolCommandTest extends Specification {
         given:
         DecToolCommand dtc = new DecToolCommand()
 
-        File f = new File("src/main/resources/ora_messenger.xml")
-
         String db_from =  "MVR"
         String db_to = "MVR"
         int size = 0;
-
-//        OraMessengerBean from_omb = dtc.parseOraMessenger(f, db_from)
-//        OraMessengerBean to_omb = dtc.parseOraMessenger(f, db_to)
-
-//        Connection from_conn = dtc.getConnection(from_omb)
-//        Connection to_conn = dtc.getConnection(to_omb)
 
         String s = ""
         String[] r = null
@@ -47,11 +39,7 @@ class DecToolCommandTest extends Specification {
         r = dbConn.getConnectionParams(s)
         System.out.println("Connection:" + s + " username=" + r[0] + " pw_plaintext=" + r[1] + " pw_encrypt=" + r[2] + " url=" + r[3])
 
-//        Connection from_conn = dtc.getConnection(from_omb)
-//        Connection to_conn = dtc.getConnection(to_omb)
-
-//        Connection from_conn = dtc.getConnection(dtc.parseJavaURL(r[3]), r[0], r[2])
-        Connection to_conn = dtc.getConnection(dtc.parseJavaURL(r[3]), r[0], r[2])
+        Connection to_conn = dtc.getConnection(dtc.parseJavaURL(r[3]))
 
         to_conn.setAutoCommit(true);
 
@@ -144,27 +132,18 @@ class DecToolCommandTest extends Specification {
 
         DecToolCommand dtc = new DecToolCommand()
 
-        File f = new File("src/main/resources/ora_messenger.xml")
-
-        /*String db_from =  "MVR"
-        String db_to = "MVR"
-
-        OraMessengerBean from_omb = dtc.parseOraMessenger(f, db_from)
-        OraMessengerBean to_omb = dtc.parseOraMessenger(f, db_to)*/
-
         String s = ""
+        String _s = ""
         String[] r = null
 
         DBConnection dbConn = new DBConnection()
         s = "DBConnect.iiX.MVR.TEST"
+        _s = "DBConnect.iiX.MVR_IN.TEST"
         r = dbConn.getConnectionParams(s)
         System.out.println("Connection:" + s + " username=" + r[0] + " pw_plaintext=" + r[1] + " pw_encrypt=" + r[2] + " url=" + r[3])
 
-//        Connection from_conn = dtc.getConnection(from_omb)
-//        Connection to_conn = dtc.getConnection(to_omb)
-
-        Connection from_conn = dtc.getConnection(dtc.parseJavaURL(r[3]), r[0], r[2])
-        Connection to_conn = dtc.getConnection(dtc.parseJavaURL(r[3]), r[0], r[2])
+        Connection from_conn = dtc.getConnection(s)
+        Connection to_conn = dtc.getConnection(s)
 
         Statement stmt = null
         ResultSet rs = null
@@ -252,6 +231,43 @@ class DecToolCommandTest extends Specification {
 
         expect:
             affectedRows > 0
+    }
+
+    def "Test query to fetch request_id(s) against a where clause" () {
+        given:
+//        StringBuilder encSelect = new StringBuilder("select sd.* from mvr.d_mvr_state_data_enc sd join mvr.d_mvr_requests req on sd.request_id = req.request_id where ")
+        String where = "req.state = 'MS'  and sd.line_no = 1 and req.product_code != '31'"
+        DecToolCommand dtc = new DecToolCommand()
+
+        List<Integer> l = new ArrayList<>();
+        l = dtc.getReqIds(where)
+
+
+        expect:
+            l.size() > 0
+
+        /*String s = "DBConnect.iiX.MVR.TEST"
+        DecToolCommand dtc = new DecToolCommand()
+        Connection from_conn = dtc.getConnection(s)
+        Statement stmt = null
+        ResultSet rs = null
+        int fetchSize = 5
+        encSelect.append(where)
+        encSelect.append("FETCH FIRST ")
+        encSelect.append(fetchSize)
+        encSelect.append(" ROWS ONLY")
+        List<Integer> l_reqids = new ArrayList<>()
+        int affectedRows = 0
+        stmt = from_conn.createStatement()
+        rs = stmt.executeQuery(encSelect.toString())
+        while (rs.next()) {
+            l_reqids.add(rs.getInt("request_id"))
+            affectedRows++
+        }
+        from_conn.close()
+        affectedRows > 0
+        */
+
     }
 
     def "Test the Trimmer instance for processing TrimConfig.properties correctly" () {

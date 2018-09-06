@@ -528,67 +528,33 @@ public class DecToolCommand implements Runnable {
         return affectedRows;
     }
 
-    private int deleteDec(String where) throws Exception {
+    private int deleteDec(int request_id) throws Exception {
 
 //        String reqIds = "select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enh sd on (req.request_id = sd.request_id)";
         StringBuilder reqIds = new StringBuilder("select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enc sd on (req.request_id = sd.request_id) where ");
+        String reqId = "select * from mvr.d_mvr_state_data_enc where request_id = " + Integer.toString(request_id);
 
         StringBuilder s = new StringBuilder("DBConnect.iiX.");
         s.append(db_to);
         s.append(".");
         s.append(env_to);
 
-        String[] r = DBConnection.getConnectionParams(s.toString());
+        Connection to_conn = getConnection(s.toString());
 
-        Connection to_conn = getConnection(parseJavaURL(r[3]), r[0], r[2]);
-
-        StringBuilder deleteReqIds = new StringBuilder("delete from mvr.d_mvr_state_data_enh where request_id in ");
+        String deleteReqId = "delete from mvr.d_mvr_state_data_enh where request_id = " + Integer.toString(request_id);
+        to_conn.setAutoCommit(false);
 
         Statement stmt = null;
         ResultSet rs = null;
 
         int affectedRows=0;
-        reqIds.append(where);
-        reqIds.append(" FETCH FIRST ");
-        reqIds.append(fsize);
-        reqIds.append(" ROWS ONLY");
-
-        deleteReqIds.append("(");
-        try {
-            stmt = to_conn.createStatement();
-            rs = stmt.executeQuery(reqIds.toString());
-
-            while (rs.next()) {
-                deleteReqIds.append(rs.getInt("request_id"));
-                deleteReqIds.append(",");
-            }
-
-            /*if (rs.next()) {
-                return affectedRows;
-            } else {
-                do {
-                    deleteReqIds.append(rs.getInt("request_id"));
-                    deleteReqIds.append(",");
-                } while (rs.next()); }*/
-
-        } catch(SQLException sql) {
-            sql.printStackTrace();
-        }
-
-        String _str = deleteReqIds.toString();
-
-        if (_str != null && _str.length() > 0 && _str.charAt(_str.length() - 1) == ',') {
-            _str = _str.substring(0, _str.length() - 1);
-        }
-
-        _str = _str+")";
 
         PreparedStatement deletePrep = null;
 
         try {
             to_conn.setAutoCommit(true);
-            deletePrep = to_conn.prepareStatement(_str);
-            affectedRows = deletePrep.executeUpdate(_str);
+            deletePrep = to_conn.prepareStatement(deleteReqId);
+            affectedRows = deletePrep.executeUpdate(deleteReqId);
         } catch (SQLException sql) {
             sql.printStackTrace();
         } finally {
@@ -623,8 +589,8 @@ public class DecToolCommand implements Runnable {
 
             try {
                 for (int rId: rIds) {
-//                    deletedRows = hwc.deleteDec(_where.toString());
-                    affectedRows = hwc.updateDec(rId);
+                    deletedRows += hwc.deleteDec(rId);
+                    affectedRows += hwc.updateDec(rId);
                 }
             } catch (Exception e) {
                 e.printStackTrace();

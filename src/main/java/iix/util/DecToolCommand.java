@@ -31,16 +31,19 @@ import java.util.List;
 
 class TrimmerSingleton
 {
-    // static variable trimmer_instance of type TrimmerSingleton
     private static TrimmerSingleton trimmer_instance = null;
 
     public Trimmer trimmer;
 
-    // private constructor restricted to this class itself
+    private static String TRIM_CONFIG_PATH = System.getenv("TRIM_CONFIG_PATH");
+
     private TrimmerSingleton()
     {
         try {
-            trimmer = new Trimmer("IIX");
+            if (TRIM_CONFIG_PATH != null && !TRIM_CONFIG_PATH.isEmpty()) {
+                File f = new File(TRIM_CONFIG_PATH);
+                trimmer = new Trimmer(f,"IIX");
+            }
         } catch (InvalidInputException e) {
             e.printStackTrace();
         } catch (InitializationException e) {
@@ -50,7 +53,7 @@ class TrimmerSingleton
 
     public static TrimmerSingleton getInstance()
     {
-        if (trimmer_instance == null)
+        if (trimmer_instance == null && TRIM_CONFIG_PATH != null && !TRIM_CONFIG_PATH.isEmpty())
             trimmer_instance = new TrimmerSingleton();
 
         return trimmer_instance;

@@ -91,17 +91,11 @@ public class DecToolCommand implements Runnable {
     @Option(names = {"-s", "-fetchSize"}, paramLabel = "fsize", description = "The row fetch first size (default: ${DEFAULT-VALUE})")
     static int fsize = 100;
 
-//    @Option(names = {"-s", "-fetchSize"}, paramLabel = "fsize", description = "The row fetch size (default: ${DEFAULT-VALUE})", showDefaultValue = CommandLine.Help.Visibility.ALWAYS)
-//    int fsize = 100;
-
-    /*@Option(names = {"-q", "-request_ids"}, split=",", paramLabel = "request_ids", description = "The list of request ids to return in the select", required = false)
-    int[] request_ids ;*/
+    @Option(names = {"-c", "-commitCount"}, paramLabel = "commitcnt", description = "The request_id transaction count before commit")
+    static int commitcnt = 500;
 
     /*@Option(names = {"-v", "--verbose"}, description = "Tool description details")
     boolean verbose=false;*/
-
-    /*@Option(names = {"-w", "-where"}, description = "Decryption where clause", required = false)
-    String where = "";*/
 
     @CommandLine.Parameters
     private
@@ -193,6 +187,7 @@ public class DecToolCommand implements Runnable {
                 String dbfromVal = parseResult.matchedOptionValue('f', "MVR");
                 String envfromVal = parseResult.matchedOptionValue('e', "TEST");
                 String dbtoVal = parseResult.matchedOptionValue('t', "MVR");
+                int cntVal = parseResult.matchedOptionValue('c', 500);
                 System.out.println("Matched fsize value: " + sizeVal);
                 if (parseResult.hasMatchedOption('s')) {
                    DecToolCommand.fsize = sizeVal;
@@ -208,6 +203,9 @@ public class DecToolCommand implements Runnable {
                 }
                 if (parseResult.hasMatchedOption('t')) {
                     DecToolCommand.db_to = dbtoVal;
+                }
+                if (parseResult.hasMatchedOption('c')) {
+                    DecToolCommand.commitcnt = cntVal;
                 }
             }
         } catch (CommandLine.ParameterException ex) { // command line arguments could not be parsed
@@ -435,7 +433,7 @@ public class DecToolCommand implements Runnable {
         return l_reqids;
     }
 
-    private int updateDec(int request_id) throws Exception {
+    private int updateDec(int request_id, int _affectedRows, int commCnt) throws Exception {
 
         StringBuilder encSelect = new StringBuilder("select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enc sd on (req.request_id = sd.request_id) where ");
         String _encSelect = "select * from mvr.d_mvr_state_data_enc where request_id = " + Integer.toString(request_id);
@@ -509,7 +507,7 @@ public class DecToolCommand implements Runnable {
                     pstm.setTimestamp(6, trst);
                     pstm.setString(7, recType);
 
-                    affectedRows += pstm.executeUpdate();
+                    affectedRows = pstm.executeUpdate();
 
 //                    System.out.println("affectedRows: " + affectedRows);
 
@@ -519,7 +517,8 @@ public class DecToolCommand implements Runnable {
                 e.printStackTrace();
             } finally {
                 if (pstm != null) pstm.close();
-                to_conn.commit();
+                if (_affectedRows >= commCnt)
+                    to_conn.commit();
                 to_conn.close();
                 from_conn.close();
             }
@@ -528,18 +527,16 @@ public class DecToolCommand implements Runnable {
         return affectedRows;
     }
 
-    private int deleteDec(int request_id) throws Exception {
+    private int deleteDec(int request_id, int _deletedRows, int commCnt) throws Exception {
 
 //        String reqIds = "select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enh sd on (req.request_id = sd.request_id)";
         StringBuilder reqIds = new StringBuilder("select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enc sd on (req.request_id = sd.request_id) where ");
         String reqId = "select * from mvr.d_mvr_state_data_enc where request_id = " + Integer.toString(request_id);
 
-        StringBuilder s = new StringBuilder("DBConnect.iiX.");
-        s.append(db_to);
-        s.append(".");
-        s.append(env_to);
-
-        Connection to_conn = getConnection(s.toString());
+        String s = "DBConnect.iiX." + db_to +
+                "." +
+                env_to;
+        Connection to_conn = getConnection(s);
 
         String deleteReqId = "delete from mvr.d_mvr_state_data_enh where request_id = " + Integer.toString(request_id);
         to_conn.setAutoCommit(false);
@@ -547,26 +544,22 @@ public class DecToolCommand implements Runnable {
         Statement stmt = null;
         ResultSet rs = null;
 
-        int affectedRows=0;
-
         PreparedStatement deletePrep = null;
 
+        int deletedRows = 0;
+
         try {
-            to_conn.setAutoCommit(true);
             deletePrep = to_conn.prepareStatement(deleteReqId);
-            affectedRows = deletePrep.executeUpdate(deleteReqId);
+            deletedRows = deletePrep.executeUpdate(deleteReqId);
         } catch (SQLException sql) {
             sql.printStackTrace();
         } finally {
-            if (deletePrep != null)  {
-                try {
-                    deletePrep.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
+            if (deletePrep != null) deletePrep.close();
+            if (_deletedRows >= commCnt)
+                to_conn.commit();
+            to_conn.close();
         }
-        return affectedRows;
+        return deletedRows;
     }
 
     public void run() {
@@ -589,8 +582,12 @@ public class DecToolCommand implements Runnable {
 
             try {
                 for (int rId: rIds) {
-                    deletedRows += hwc.deleteDec(rId);
-                    affectedRows += hwc.updateDec(rId);
+                    if (deletedRows >= commitcnt)
+                        deletedRows = 0;
+                    deletedRows += hwc.deleteDec(rId, deletedRows, commitcnt);
+                    if (affectedRows >= commitcnt)
+                        affectedRows = 0;
+                    affectedRows += hwc.updateDec(rId,affectedRows, commitcnt);
                 }
             } catch (Exception e) {
                 e.printStackTrace();

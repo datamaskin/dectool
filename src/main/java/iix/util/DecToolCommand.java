@@ -94,7 +94,7 @@ public class DecToolCommand implements Runnable {
     @Option(names = {"-s", "-fetchSize"}, paramLabel = "fsize", description = "The row fetch first size (default: ${DEFAULT-VALUE})")
     static int fsize = 100;
 
-    @Option(names = {"-c", "-commitCount"}, paramLabel = "commitcnt", description = "The request_id transaction count before commit")
+    @Option(names = {"-c", "-commitCount"}, paramLabel = "commitcnt", description = "The request_id transaction count before commit (default: ${DEFAULT-VALUE})")
     static int commitcnt = 500;
 
     /*@Option(names = {"-v", "--verbose"}, description = "Tool description details")

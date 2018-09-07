@@ -1,6 +1,6 @@
 package iix.util
 
-
+import groovy.util.logging.Slf4j
 import iixToolkit.db.connection.DBConnection
 import spock.lang.Specification
 import util.toolkit.stringtools.Trimmer
@@ -21,6 +21,7 @@ import java.sql.SQLException
 import java.sql.Statement
 import java.sql.Timestamp
 
+@Slf4j
 class DecToolCommandTest extends Specification {
 
     def "Test selecting request_ids as input to the deletion process" () {
@@ -132,7 +133,6 @@ class DecToolCommandTest extends Specification {
         String _s = ""
         String[] r = null
 
-        DBConnection dbConn = new DBConnection()
         s = "DBConnect.iiX.MVR.TEST"
 
         Connection from_conn = dtc.getConnection(s)
@@ -230,8 +230,12 @@ class DecToolCommandTest extends Specification {
         String where = "req.state = 'MS'  and sd.line_no = 1 and req.product_code != '31'"
         DecToolCommand dtc = new DecToolCommand()
 
-        List<Integer> l = new ArrayList<>();
+        List<Integer> l = new ArrayList<>()
         l = dtc.getReqIds(where)
+        log.debug("Request ids array:")
+        for (int i = 0; i < l.size(); i++) {
+            log.debug(l.get(i).toString())
+        }
 
         expect:
             l.size() > 0
@@ -241,6 +245,7 @@ class DecToolCommandTest extends Specification {
     def "Test the Trimmer instance for processing TrimConfig.properties correctly using TrimmerSingleton" () {
         given:
         TrimmerSingleton ts = TrimmerSingleton.getInstance()
+        log.debug("TrimmerSingleton: `${ts}`")
 
         expect:
         ts

@@ -163,10 +163,6 @@ public class DecToolCommand implements Runnable {
        String[] url_ = url.split("\\(", 8);
        List<String> urlList = new ArrayList<>();
 
-//       System.out.println("JavaURL: " + url_[4].split("\\)", 2)[0]);
-//       System.out.println("JavaURL: " + url_[5].split("\\)", 2)[0]);
-//       System.out.println("JavaURL: " + url_[7].split("\\)", 2)[0]);
-
        urlList.add(url_[4].split("\\)", 2)[0].split("=", 2)[1]);
        urlList.add(url_[5].split("\\)", 2)[0].split("=", 2)[1]);
        urlList.add(url_[7].split("\\)", 2)[0].split("=", 2)[1]);

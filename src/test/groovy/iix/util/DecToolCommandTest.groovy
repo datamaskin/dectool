@@ -33,7 +33,6 @@ class DecToolCommandTest extends Specification {
 
         String s = ""
 
-        DBConnection dbConn = new DBConnection()
         s = "DBConnect.iiX.MVR_IN.TEST"
 
         Connection to_conn = dtc.getConnection(s)

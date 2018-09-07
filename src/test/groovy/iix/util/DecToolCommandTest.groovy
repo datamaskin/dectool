@@ -28,18 +28,15 @@ class DecToolCommandTest extends Specification {
         DecToolCommand dtc = new DecToolCommand()
 
         String db_from =  "MVR"
-        String db_to = "MVR"
-        int size = 0;
+        String db_to = "MVR_IN"
+        int size = 0
 
         String s = ""
-        String[] r = null
 
         DBConnection dbConn = new DBConnection()
-        s = "DBConnect.iiX.MVR.TEST"
-        r = dbConn.getConnectionParams(s)
-        System.out.println("Connection:" + s + " username=" + r[0] + " pw_plaintext=" + r[1] + " pw_encrypt=" + r[2] + " url=" + r[3])
+        s = "DBConnect.iiX.MVR_IN.TEST"
 
-        Connection to_conn = dtc.getConnection(dtc.parseJavaURL(r[3]))
+        Connection to_conn = dtc.getConnection(s)
 
         to_conn.setAutoCommit(true);
 
@@ -99,7 +96,7 @@ class DecToolCommandTest extends Specification {
         closed
     }
 
-    def "Test where clauses to be put on the DecTool CLI to fetch the request_id(s) of the encrypted data" () {
+    def "Test where clauses to be put on the DecTool CLI to fetch the request_id(s) of the encrypted data, decrypt and insert into enh" () {
         given:
         StringBuilder encSelect = new StringBuilder("select sd.* from mvr.d_mvr_state_data_enc sd join mvr.d_mvr_requests req on sd.request_id = req.request_id where ");
 
@@ -138,9 +135,6 @@ class DecToolCommandTest extends Specification {
 
         DBConnection dbConn = new DBConnection()
         s = "DBConnect.iiX.MVR.TEST"
-        _s = "DBConnect.iiX.MVR_IN.TEST"
-        r = dbConn.getConnectionParams(s)
-        System.out.println("Connection:" + s + " username=" + r[0] + " pw_plaintext=" + r[1] + " pw_encrypt=" + r[2] + " url=" + r[3])
 
         Connection from_conn = dtc.getConnection(s)
         Connection to_conn = dtc.getConnection(s)
@@ -180,11 +174,9 @@ class DecToolCommandTest extends Specification {
                 System.out.println(request_id + " " + trst + " " + line_no + " " + state)
                 byte[] dec = new byte[4000]
 
-//                File props = new File("src/main/resources/trimconfig.properties")
                 try {
-//                    Trimmer trimmer = new Trimmer(props, "IIX")
-                    Trimmer trimmer = new Trimmer( "IIX")
-                    dec = trimmer.trailing("IIX", _data)
+                    TrimmerSingleton ts = TrimmerSingleton.getInstance()
+                    dec = ts.trimmer.trailing("IIX", _data)
                     System.out.println(new String(dec))
                 } catch (InitializationException e) {
                     e.printStackTrace()
@@ -242,40 +234,17 @@ class DecToolCommandTest extends Specification {
         List<Integer> l = new ArrayList<>();
         l = dtc.getReqIds(where)
 
-
         expect:
             l.size() > 0
 
-        /*String s = "DBConnect.iiX.MVR.TEST"
-        DecToolCommand dtc = new DecToolCommand()
-        Connection from_conn = dtc.getConnection(s)
-        Statement stmt = null
-        ResultSet rs = null
-        int fetchSize = 5
-        encSelect.append(where)
-        encSelect.append("FETCH FIRST ")
-        encSelect.append(fetchSize)
-        encSelect.append(" ROWS ONLY")
-        List<Integer> l_reqids = new ArrayList<>()
-        int affectedRows = 0
-        stmt = from_conn.createStatement()
-        rs = stmt.executeQuery(encSelect.toString())
-        while (rs.next()) {
-            l_reqids.add(rs.getInt("request_id"))
-            affectedRows++
-        }
-        from_conn.close()
-        affectedRows > 0
-        */
-
     }
 
-    def "Test the Trimmer instance for processing TrimConfig.properties correctly" () {
+    def "Test the Trimmer instance for processing TrimConfig.properties correctly using TrimmerSingleton" () {
         given:
-        Trimmer trimmer = new Trimmer("IIX")
+        TrimmerSingleton ts = TrimmerSingleton.getInstance()
 
         expect:
-        trimmer
+        ts
     }
 
     /*def "getConnection test this method for returning a valid jdbc connection string from the ora_messenger.xml file" () {
@@ -298,7 +267,7 @@ class DecToolCommandTest extends Specification {
         sysDate.contains("Sysdate")
     }*/
 
-    def "ParseJavaURL test this method for the string extracted from the right side of the '@' sign from JavaURl"() {
+    /*def "ParseJavaURL test this method for the string extracted from the right side of the '@' sign from JavaURl"() {
         given:
         String url = "(DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=DEVTIP)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=oratestM.util)))"
         DecToolCommand hwc = new DecToolCommand()
@@ -306,7 +275,7 @@ class DecToolCommandTest extends Specification {
 
         expect:
         _url.equals("jdbc:oracle:thin:@//DEVTIP:1521/oratestM.util")
-    }
+    }*/
 
     /*def "ParseOraMessenger test this method for the default local file: src/main/resources/ora_messenger.xmls"() {
         given:

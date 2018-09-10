@@ -98,7 +98,7 @@ class DecToolCommandTest extends Specification {
 
     def "Test where clauses to be put on the DecTool CLI to fetch the request_id(s) of the encrypted data, decrypt and insert into enh" () {
         given:
-        StringBuilder encSelect = new StringBuilder("select sd.* from mvr.d_mvr_state_data_enc sd join mvr.d_mvr_requests req on sd.request_id = req.request_id where ");
+        StringBuilder encSelect = new StringBuilder("select sd.* from mvr.d_mvr_state_data_enc sd join mvr.d_mvr_requests req on sd.request_id = req.request_id where ")
 
             // working
 //        String where = " req.state = 'MS'\n" +
@@ -156,6 +156,8 @@ class DecToolCommandTest extends Specification {
         encSelect.append(" ROWS ONLY")
         int affectedRows = 0
         StringBuilder mvr_state =  new StringBuilder("insert into MVR.D_MVR_STATE_DATA_ENH(request_id, time_report_start, line_no, state, data, time_report_start_ts,record_type) values(?,?,?,?,?,?,?)");
+
+        boolean wrongdelimiter = false
         try {
             stmt = from_conn.createStatement()
             rs = stmt.executeQuery(encSelect.toString())
@@ -188,6 +190,7 @@ class DecToolCommandTest extends Specification {
                 } catch (TimeoutException e) {
                     e.printStackTrace()
                 } catch (WrongDelimiterException e) {
+                    wrongdelimiter = true
                     e.printStackTrace()
                 } catch (InvalidSyntaxException e) {
                     e.printStackTrace()
@@ -221,6 +224,7 @@ class DecToolCommandTest extends Specification {
         }
 
         expect:
+            !wrongdelimiter
             affectedRows > 0
     }
 

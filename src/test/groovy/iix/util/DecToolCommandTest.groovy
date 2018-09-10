@@ -1,6 +1,5 @@
 package iix.util
 
-import groovy.util.logging.Slf4j
 import spock.lang.Specification
 import util.toolkit.stringtools.exceptions.ClientErrorException
 import util.toolkit.stringtools.exceptions.FpeDispatcherException

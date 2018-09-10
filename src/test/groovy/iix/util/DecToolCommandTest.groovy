@@ -19,7 +19,7 @@ import java.sql.SQLException
 import java.sql.Statement
 import java.sql.Timestamp
 
-@Slf4j
+
 class DecToolCommandTest extends Specification {
 
     def "Test selecting request_ids as input to the deletion process" () {

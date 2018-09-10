@@ -1,9 +1,7 @@
 package iix.util
 
-
-import iixToolkit.db.connection.DBConnection
+import groovy.util.logging.Slf4j
 import spock.lang.Specification
-import util.toolkit.stringtools.Trimmer
 import util.toolkit.stringtools.exceptions.ClientErrorException
 import util.toolkit.stringtools.exceptions.FpeDispatcherException
 import util.toolkit.stringtools.exceptions.InitializationException
@@ -21,37 +19,22 @@ import java.sql.SQLException
 import java.sql.Statement
 import java.sql.Timestamp
 
+@Slf4j
 class DecToolCommandTest extends Specification {
 
     def "Test selecting request_ids as input to the deletion process" () {
         given:
         DecToolCommand dtc = new DecToolCommand()
 
-        File f = new File("src/main/resources/ora_messenger.xml")
-
         String db_from =  "MVR"
-        String db_to = "MVR"
-        int size = 0;
-
-//        OraMessengerBean from_omb = dtc.parseOraMessenger(f, db_from)
-//        OraMessengerBean to_omb = dtc.parseOraMessenger(f, db_to)
-
-//        Connection from_conn = dtc.getConnection(from_omb)
-//        Connection to_conn = dtc.getConnection(to_omb)
+        String db_to = "MVR_IN"
+        int size = 0
 
         String s = ""
-        String[] r = null
 
-        DBConnection dbConn = new DBConnection()
-        s = "DBConnect.iiX.MVR.TEST"
-        r = dbConn.getConnectionParams(s)
-        System.out.println("Connection:" + s + " username=" + r[0] + " pw_plaintext=" + r[1] + " pw_encrypt=" + r[2] + " url=" + r[3])
+        s = "DBConnect.iiX.MVR_IN.TEST"
 
-//        Connection from_conn = dtc.getConnection(from_omb)
-//        Connection to_conn = dtc.getConnection(to_omb)
-
-//        Connection from_conn = dtc.getConnection(dtc.parseJavaURL(r[3]), r[0], r[2])
-        Connection to_conn = dtc.getConnection(dtc.parseJavaURL(r[3]), r[0], r[2])
+        Connection to_conn = dtc.getConnection(s)
 
         to_conn.setAutoCommit(true);
 
@@ -111,9 +94,9 @@ class DecToolCommandTest extends Specification {
         closed
     }
 
-    def "Test where clauses to be put on the DecTool CLI to fetch the request_id(s) of the encrypted data" () {
+    def "Test where clauses to be put on the DecTool CLI to fetch the request_id(s) of the encrypted data, decrypt and insert into enh" () {
         given:
-        StringBuilder encSelect = new StringBuilder("select sd.* from mvr.d_mvr_state_data_enc sd join mvr.d_mvr_requests req on sd.request_id = req.request_id where ");
+        StringBuilder encSelect = new StringBuilder("select sd.* from mvr.d_mvr_state_data_enc sd join mvr.d_mvr_requests req on sd.request_id = req.request_id where ")
 
             // working
 //        String where = " req.state = 'MS'\n" +
@@ -144,27 +127,14 @@ class DecToolCommandTest extends Specification {
 
         DecToolCommand dtc = new DecToolCommand()
 
-        File f = new File("src/main/resources/ora_messenger.xml")
-
-        /*String db_from =  "MVR"
-        String db_to = "MVR"
-
-        OraMessengerBean from_omb = dtc.parseOraMessenger(f, db_from)
-        OraMessengerBean to_omb = dtc.parseOraMessenger(f, db_to)*/
-
         String s = ""
+        String _s = ""
         String[] r = null
 
-        DBConnection dbConn = new DBConnection()
         s = "DBConnect.iiX.MVR.TEST"
-        r = dbConn.getConnectionParams(s)
-        System.out.println("Connection:" + s + " username=" + r[0] + " pw_plaintext=" + r[1] + " pw_encrypt=" + r[2] + " url=" + r[3])
 
-//        Connection from_conn = dtc.getConnection(from_omb)
-//        Connection to_conn = dtc.getConnection(to_omb)
-
-        Connection from_conn = dtc.getConnection(dtc.parseJavaURL(r[3]), r[0], r[2])
-        Connection to_conn = dtc.getConnection(dtc.parseJavaURL(r[3]), r[0], r[2])
+        Connection from_conn = dtc.getConnection(s)
+        Connection to_conn = dtc.getConnection(s)
 
         Statement stmt = null
         ResultSet rs = null
@@ -184,6 +154,8 @@ class DecToolCommandTest extends Specification {
         encSelect.append(" ROWS ONLY")
         int affectedRows = 0
         StringBuilder mvr_state =  new StringBuilder("insert into MVR.D_MVR_STATE_DATA_ENH(request_id, time_report_start, line_no, state, data, time_report_start_ts,record_type) values(?,?,?,?,?,?,?)");
+
+        boolean wrongdelimiter = false
         try {
             stmt = from_conn.createStatement()
             rs = stmt.executeQuery(encSelect.toString())
@@ -201,11 +173,9 @@ class DecToolCommandTest extends Specification {
                 System.out.println(request_id + " " + trst + " " + line_no + " " + state)
                 byte[] dec = new byte[4000]
 
-//                File props = new File("src/main/resources/trimconfig.properties")
                 try {
-//                    Trimmer trimmer = new Trimmer(props, "IIX")
-                    Trimmer trimmer = new Trimmer( "IIX")
-                    dec = trimmer.trailing("IIX", _data)
+                    TrimmerSingleton ts = TrimmerSingleton.getInstance()
+                    dec = ts.trimmer.trailing("IIX", _data)
                     System.out.println(new String(dec))
                 } catch (InitializationException e) {
                     e.printStackTrace()
@@ -218,6 +188,7 @@ class DecToolCommandTest extends Specification {
                 } catch (TimeoutException e) {
                     e.printStackTrace()
                 } catch (WrongDelimiterException e) {
+                    wrongdelimiter = true
                     e.printStackTrace()
                 } catch (InvalidSyntaxException e) {
                     e.printStackTrace()
@@ -251,56 +222,35 @@ class DecToolCommandTest extends Specification {
         }
 
         expect:
+            !wrongdelimiter
             affectedRows > 0
     }
 
-    def "Test the Trimmer instance for processing TrimConfig.properties correctly" () {
+    def "Test query to fetch request_id(s) against a where clause" () {
         given:
-        Trimmer trimmer = new Trimmer("IIX")
+//        StringBuilder encSelect = new StringBuilder("select sd.* from mvr.d_mvr_state_data_enc sd join mvr.d_mvr_requests req on sd.request_id = req.request_id where ")
+        String where = "req.state = 'MS'  and sd.line_no = 1 and req.product_code != '31'"
+        DecToolCommand dtc = new DecToolCommand()
 
-        expect:
-        trimmer
-    }
-
-    /*def "getConnection test this method for returning a valid jdbc connection string from the ora_messenger.xml file" () {
-        given:
-        File f = new File("src/main/resources/ora_messenger.xml")
-        String sysDate = ";"
-
-        DecToolCommand hwc = new DecToolCommand()
-        OraMessengerBean _omb = hwc.parseOraMessenger(f, "MVR")
-        java.sql.Connection conn = null
-        try {
-//            conn = hwc.getConnection("MVR", "TEST", f)
-            conn =  DBConnection.CreateConnection(_omb.get_javaURL(), _omb.getUser(), _omb.getEncpPswd())
-            sysDate = DBConnection.getDBSysdate(conn)
-        } catch (Exception e) {
-            e.printStackTrace()
+        List<Integer> l = new ArrayList<>()
+        l = dtc.getReqIds(where)
+        log.debug("Request ids array:")
+        for (int i = 0; i < l.size(); i++) {
+            log.debug(l.get(i).toString())
         }
 
         expect:
-        sysDate.contains("Sysdate")
-    }*/
+            l.size() > 0
 
-    def "ParseJavaURL test this method for the string extracted from the right side of the '@' sign from JavaURl"() {
-        given:
-        String url = "(DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=DEVTIP)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=oratestM.util)))"
-        DecToolCommand hwc = new DecToolCommand()
-        String _url =  hwc.parseJavaURL(url)
-
-        expect:
-        _url.equals("jdbc:oracle:thin:@//DEVTIP:1521/oratestM.util")
     }
 
-    /*def "ParseOraMessenger test this method for the default local file: src/main/resources/ora_messenger.xmls"() {
+    def "Test the Trimmer instance for processing TrimConfig.properties correctly using TrimmerSingleton" () {
         given:
-        File f = new File("src/main/resources/ora_messenger.xml")
-
-        DecToolCommand hwc = new DecToolCommand()
-        String oraMessenger = hwc.parseOraMessenger(f, "MVR")
+        TrimmerSingleton ts = TrimmerSingleton.getInstance()
+        log.debug("TrimmerSingleton: `${ts}`")
 
         expect:
-        oraMessenger.contains("JavaURL")
-    }*/
+        ts
+    }
 
 }

@@ -25,8 +25,40 @@ import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+
+class TrimmerSingleton
+{
+    private static TrimmerSingleton trimmer_instance = null;
+
+    public Trimmer trimmer;
+
+    private static String TRIM_CONFIG_PATH = System.getenv("TRIM_CONFIG_PATH");
+
+    private TrimmerSingleton()
+    {
+        try {
+            if (TRIM_CONFIG_PATH != null && !TRIM_CONFIG_PATH.isEmpty()) {
+                File f = new File(TRIM_CONFIG_PATH);
+                trimmer = new Trimmer(f,"IIX");
+            }
+        } catch (InvalidInputException e) {
+            e.printStackTrace();
+        } catch (InitializationException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static TrimmerSingleton getInstance()
+    {
+        if (trimmer_instance == null && TRIM_CONFIG_PATH != null && !TRIM_CONFIG_PATH.isEmpty())
+            trimmer_instance = new TrimmerSingleton();
+
+        return trimmer_instance;
+    }
+}
 /*@Command(name = "DecToolCommand",
         header = {
                 "@|green  __                ___      |@",
@@ -62,21 +94,15 @@ public class DecToolCommand implements Runnable {
     @Option(names = {"-s", "-fetchSize"}, paramLabel = "fsize", description = "The row fetch first size (default: ${DEFAULT-VALUE})")
     static int fsize = 100;
 
-//    @Option(names = {"-s", "-fetchSize"}, paramLabel = "fsize", description = "The row fetch size (default: ${DEFAULT-VALUE})", showDefaultValue = CommandLine.Help.Visibility.ALWAYS)
-//    int fsize = 100;
-
-    /*@Option(names = {"-q", "-request_ids"}, split=",", paramLabel = "request_ids", description = "The list of request ids to return in the select", required = false)
-    int[] request_ids ;*/
+    @Option(names = {"-c", "-commitCount"}, paramLabel = "commitcnt", description = "The request_id transaction count before commit (default: ${DEFAULT-VALUE})")
+    static int commitcnt = 500;
 
     /*@Option(names = {"-v", "--verbose"}, description = "Tool description details")
     boolean verbose=false;*/
 
-    /*@Option(names = {"-w", "-where"}, description = "Decryption where clause", required = false)
-    String where = "";*/
-
     @CommandLine.Parameters
+    private
     List<String> where;
-
 
     private void listNodes(Node node, String indent) {
         if (node instanceof Text) {
@@ -137,10 +163,6 @@ public class DecToolCommand implements Runnable {
        String[] url_ = url.split("\\(", 8);
        List<String> urlList = new ArrayList<>();
 
-//       System.out.println("JavaURL: " + url_[4].split("\\)", 2)[0]);
-//       System.out.println("JavaURL: " + url_[5].split("\\)", 2)[0]);
-//       System.out.println("JavaURL: " + url_[7].split("\\)", 2)[0]);
-
        urlList.add(url_[4].split("\\)", 2)[0].split("=", 2)[1]);
        urlList.add(url_[5].split("\\)", 2)[0].split("=", 2)[1]);
        urlList.add(url_[7].split("\\)", 2)[0].split("=", 2)[1]);
@@ -164,6 +186,7 @@ public class DecToolCommand implements Runnable {
                 String dbfromVal = parseResult.matchedOptionValue('f', "MVR");
                 String envfromVal = parseResult.matchedOptionValue('e', "TEST");
                 String dbtoVal = parseResult.matchedOptionValue('t', "MVR");
+                int cntVal = parseResult.matchedOptionValue('c', 500);
                 System.out.println("Matched fsize value: " + sizeVal);
                 if (parseResult.hasMatchedOption('s')) {
                    DecToolCommand.fsize = sizeVal;
@@ -179,6 +202,9 @@ public class DecToolCommand implements Runnable {
                 }
                 if (parseResult.hasMatchedOption('t')) {
                     DecToolCommand.db_to = dbtoVal;
+                }
+                if (parseResult.hasMatchedOption('c')) {
+                    DecToolCommand.commitcnt = cntVal;
                 }
             }
         } catch (CommandLine.ParameterException ex) { // command line arguments could not be parsed
@@ -353,7 +379,7 @@ public class DecToolCommand implements Runnable {
         return conn;
     }
 
-    java.sql.Connection getConnection(String inconn, String inuser, String pw) {
+    private java.sql.Connection getConnection(String inconn, String inuser, String pw) {
 
         java.sql.Connection conn = null;
 
@@ -365,17 +391,54 @@ public class DecToolCommand implements Runnable {
         return conn;
     }
 
-    private int updateDec(String where) throws Exception {
+    java.sql.Connection getConnection(String inconn) {
+
+        java.sql.Connection conn = null;
+
+        try {
+            conn =  DBConnection.CreateConnection(inconn);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return conn;
+    }
+
+    List<Integer> getReqIds(String where) {
+
+        StringBuilder encSelect = new StringBuilder("select sd.* from mvr.d_mvr_state_data_enc sd join mvr.d_mvr_requests req on sd.request_id = req.request_id where ");
+
+        String s = "DBConnect.iiX.MVR.TEST";
+        DecToolCommand dtc = new DecToolCommand();
+        Connection from_conn = dtc.getConnection(s);
+        Statement stmt = null;
+        ResultSet rs = null;
+        encSelect.append(where);
+        encSelect.append("FETCH FIRST ");
+        encSelect.append(fsize);
+        encSelect.append(" ROWS ONLY");
+        List<Integer> l_reqids = new ArrayList<>();
+
+        try {
+            stmt = from_conn.createStatement();
+            rs = stmt.executeQuery(encSelect.toString());
+            while (rs.next()) {
+                l_reqids.add(rs.getInt("request_id"));
+            }
+            from_conn.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return l_reqids;
+    }
+
+    private int updateDec(int request_id, int _affectedRows, int commCnt) throws Exception {
 
         StringBuilder encSelect = new StringBuilder("select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enc sd on (req.request_id = sd.request_id) where ");
+        String _encSelect = "select * from mvr.d_mvr_state_data_enc where request_id = " + Integer.toString(request_id);
 
         int affectedRows = 0;
-        if (where != null && !where.isEmpty()) {
-            /*OraMessengerBean from_omb = parseOraMessenger(f, db_from);
-            OraMessengerBean to_omb = parseOraMessenger(f, db_to);
-
-            Connection from_conn = getConnection(from_omb);
-            Connection to_conn = getConnection(to_omb);*/
+        if (request_id >= 0) {
 
             StringBuilder s = new StringBuilder("DBConnect.iiX.");
             s.append(db_from);
@@ -387,11 +450,8 @@ public class DecToolCommand implements Runnable {
             _s.append(".");
             _s.append(env_to);
 
-            String[] r = DBConnection.getConnectionParams(s.toString());
-            String[] _r = DBConnection.getConnectionParams(_s.toString());
-
-            Connection to_conn = getConnection(parseJavaURL(_r[3]), _r[0], r[2]);
-            Connection from_conn = getConnection(parseJavaURL(r[3]), r[0], r[2]);
+            Connection from_conn = getConnection(s.toString());
+            Connection to_conn = getConnection(_s.toString());
 
             to_conn.setAutoCommit(false);
 
@@ -400,13 +460,12 @@ public class DecToolCommand implements Runnable {
 
             Blob data = null;
             byte[] _data = null;
-            int request_id = 0;
             Timestamp trst = null;
             Date trs = null;
             int line_no = 0;
             String state = "";
             String recType = "";
-            encSelect.append(where);
+            encSelect.append(request_id);
             encSelect.append("FETCH FIRST ");
             encSelect.append(fsize);
             encSelect.append(" ROWS ONLY");
@@ -414,12 +473,13 @@ public class DecToolCommand implements Runnable {
             StringBuilder mvr_state = new StringBuilder("insert into MVR.D_MVR_STATE_DATA_ENH(request_id, time_report_start, line_no, state, data, time_report_start_ts,record_type) values(?,?,?,?,?,?,?)");
             PreparedStatement pstm = null;
 
-            Trimmer trimmer = null;
+            TrimmerSingleton ts = TrimmerSingleton.getInstance();
+
             try {
                 stmt = from_conn.createStatement();
-                rs = stmt.executeQuery(encSelect.toString());
+                rs = stmt.executeQuery(_encSelect);
 
-                while (rs.next()) {
+                if (rs.next()) {
 
                     data = rs.getBlob("DATA");
                     _data = data.getBytes(1, (int) data.length());
@@ -430,35 +490,11 @@ public class DecToolCommand implements Runnable {
                     state = rs.getString("state");
                     recType = rs.getString("record_type");
 //                    System.out.println(request_id + " " + trst + " " + line_no + " " + state);
-                    byte[] dec = new byte[4000];
+                    byte dec[] = new byte[4000];
+                    Arrays.fill(dec, (byte)8);
 
-//                    File props = new File("src/main/resources/trimconfig.properties");
-                    /*try {
-//                        Trimmer trimmer = new Trimmer(props, "IIX");
-                        Trimmer trimmer = new Trimmer("IIX");
-                        dec = trimmer.trailing("IIX", _data);
-//                        System.out.println(new String(dec));
-                    } catch (InitializationException e) {
-                        e.printStackTrace();
-                    } catch (InvalidInputException e) {
-                        e.printStackTrace();
-                    } catch (FpeDispatcherException e) {
-                        e.printStackTrace();
-                    } catch (NullInputException e) {
-                        e.printStackTrace();
-                    } catch (TimeoutException e) {
-                        e.printStackTrace();
-                    } catch (WrongDelimiterException e) {
-                        e.printStackTrace();
-                    } catch (InvalidSyntaxException e) {
-                        e.printStackTrace();
-                    } catch (ClientErrorException e) {
-                        e.printStackTrace();
-                    }*/
 
-                    trimmer = new Trimmer("IIX");
-
-                    dec = trimmer.trailing("IIX", _data);
+                    dec = ts.trimmer.trailing("IIX", _data);
 
                     pstm = to_conn.prepareStatement(mvr_state.toString());
 
@@ -470,7 +506,7 @@ public class DecToolCommand implements Runnable {
                     pstm.setTimestamp(6, trst);
                     pstm.setString(7, recType);
 
-                    affectedRows += pstm.executeUpdate();
+                    affectedRows = pstm.executeUpdate();
 
 //                    System.out.println("affectedRows: " + affectedRows);
 
@@ -480,95 +516,49 @@ public class DecToolCommand implements Runnable {
                 e.printStackTrace();
             } finally {
                 if (pstm != null) pstm.close();
-                to_conn.commit();
+                if (_affectedRows >= commCnt)
+                    to_conn.commit();
                 to_conn.close();
                 from_conn.close();
-                if (trimmer == null)
-                    throw new InitializationException();
             }
         }
 
         return affectedRows;
     }
 
-    private int deleteDec(String where) throws Exception {
-        /*OraMessengerBean from_omb = parseOraMessenger(f, db_from);
-        OraMessengerBean to_omb = parseOraMessenger(f, db_to);
-
-        Connection from_conn = getConnection(from_omb);
-        Connection to_conn = getConnection(to_omb);*/
+    private int deleteDec(int request_id, int _deletedRows, int commCnt) throws Exception {
 
 //        String reqIds = "select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enh sd on (req.request_id = sd.request_id)";
         StringBuilder reqIds = new StringBuilder("select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enc sd on (req.request_id = sd.request_id) where ");
+        String reqId = "select * from mvr.d_mvr_state_data_enc where request_id = " + Integer.toString(request_id);
 
-        StringBuilder s = new StringBuilder("DBConnect.iiX.");
-        s.append(db_to);
-        s.append(".");
-        s.append(env_to);
+        String s = "DBConnect.iiX." + db_to +
+                "." +
+                env_to;
+        Connection to_conn = getConnection(s);
 
-        String[] r = DBConnection.getConnectionParams(s.toString());
-
-        Connection to_conn = getConnection(parseJavaURL(r[3]), r[0], r[2]);
-
-        StringBuilder deleteReqIds = new StringBuilder("delete from mvr.d_mvr_state_data_enh where request_id in ");
+        String deleteReqId = "delete from mvr.d_mvr_state_data_enh where request_id = " + Integer.toString(request_id);
+        to_conn.setAutoCommit(false);
 
         Statement stmt = null;
         ResultSet rs = null;
 
-        int affectedRows=0;
-        reqIds.append(where);
-        reqIds.append(" FETCH FIRST ");
-        reqIds.append(fsize);
-        reqIds.append(" ROWS ONLY");
-
-        deleteReqIds.append("(");
-        try {
-            stmt = to_conn.createStatement();
-            rs = stmt.executeQuery(reqIds.toString());
-
-            while (rs.next()) {
-                deleteReqIds.append(rs.getInt("request_id"));
-                deleteReqIds.append(",");
-            }
-
-            /*if (rs.next()) {
-                return affectedRows;
-            } else {
-                do {
-                    deleteReqIds.append(rs.getInt("request_id"));
-                    deleteReqIds.append(",");
-                } while (rs.next()); }*/
-
-        } catch(SQLException sql) {
-            sql.printStackTrace();
-        }
-
-        String _str = deleteReqIds.toString();
-
-        if (_str != null && _str.length() > 0 && _str.charAt(_str.length() - 1) == ',') {
-            _str = _str.substring(0, _str.length() - 1);
-        }
-
-        _str = _str+")";
-
         PreparedStatement deletePrep = null;
 
+        int deletedRows = 0;
+
         try {
-            to_conn.setAutoCommit(true);
-            deletePrep = to_conn.prepareStatement(_str);
-            affectedRows = deletePrep.executeUpdate(_str);
+            deletePrep = to_conn.prepareStatement(deleteReqId);
+            deletedRows = deletePrep.executeUpdate(deleteReqId);
         } catch (SQLException sql) {
             sql.printStackTrace();
         } finally {
-            if (deletePrep != null)  {
-                try {
-                    deletePrep.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
+            if (deletePrep != null) deletePrep.close();
+            if (_deletedRows >= commCnt)
+                to_conn.commit();
+            to_conn.close();
         }
-        return affectedRows;
+        return deletedRows;
     }
 
     public void run() {
@@ -587,9 +577,17 @@ public class DecToolCommand implements Runnable {
             }
             j++;
             _where.append(where.get(j));
+            List<Integer> rIds = hwc.getReqIds(_where.toString());
+
             try {
-                deletedRows = hwc.deleteDec(_where.toString());
-                affectedRows = hwc.updateDec(_where.toString());
+                for (int rId: rIds) {
+                    if (deletedRows >= commitcnt)
+                        deletedRows = 0;
+                    deletedRows += hwc.deleteDec(rId, deletedRows, commitcnt);
+                    if (affectedRows >= commitcnt)
+                        affectedRows = 0;
+                    affectedRows += hwc.updateDec(rId,affectedRows, commitcnt);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             }

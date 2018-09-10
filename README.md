@@ -92,3 +92,29 @@ with no command line arguments (help message is displayed)
  #and
  #'sd.time_report_start=(select max(time_report_start) from mvr.d_mvr_state_data_enc sm where sm.request_id=req.request_id)'
 ```
+
+######Running the tests
+* If not already clone repo: ssh://git.iix.com:/git/Common/TrimConfigProperties.git
+* At the commandline define envvar: TRIM_CONFIG_PATH
+* Linux: export TRIM_CONFIG_PATH=<path-to-cloned-TrimConfig>
+* ./mvnw clean compile package
+* Windows 
+* mvnw clean compile package
+* Outcome all tests pass: Build Success
+* 1 test fails such as decryption:
+
+```
+Test set: iix.util.DecToolCommandTest
+-------------------------------------------------------------------------------
+Tests run: 4, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 6.788 s <<< FAILURE! - in iix.util.DecToolCommandTest
+Test where clauses to be put on the DecTool CLI to fetch the request_id(s) of the encrypted data, decrypt and insert into enh(iix.util.DecToolCommandTest)  Time elapsed: 3.264 s  <<< FAILURE!
+org.spockframework.runtime.ConditionNotSatisfiedError: 
+Condition not satisfied:
+
+!wrongdelimiter
+||
+|true
+false
+
+	at iix.util.DecToolCommandTest.Test where clauses to be put on the DecTool CLI to fetch the request_id(s) of the encrypted data, decrypt and insert into enh(DecToolCommandTest.groovy:227)
+```

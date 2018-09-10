@@ -98,7 +98,7 @@ with no command line arguments (help message is displayed)
 * At the commandline define envvar: TRIM_CONFIG_PATH
 * Linux: export TRIM_CONFIG_PATH=<path-to-cloned-TrimConfig>
 * ./mvnw clean compile package
-* Windows 
+* Windows: set TRIM_CONFIG_PATH=<path-to-cloned-TrimConfig> 
 * mvnw clean compile package
 * Outcome all tests pass: Build Success
 * 1 test fails such as decryption:

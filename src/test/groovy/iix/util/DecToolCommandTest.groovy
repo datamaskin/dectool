@@ -1,9 +1,7 @@
 package iix.util
 
 import groovy.util.logging.Slf4j
-import iixToolkit.db.connection.DBConnection
 import spock.lang.Specification
-import util.toolkit.stringtools.Trimmer
 import util.toolkit.stringtools.exceptions.ClientErrorException
 import util.toolkit.stringtools.exceptions.FpeDispatcherException
 import util.toolkit.stringtools.exceptions.InitializationException

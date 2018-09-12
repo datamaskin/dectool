@@ -65,6 +65,12 @@
           <scope>runtime</scope>
         </dependency>
         <dependency>
+          <groupId>oracle.jdbc.12c</groupId>
+          <artifactId>ojdbc7</artifactId>
+          <version>12.1.0.1</version>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
           <groupId>org.spockframework</groupId>
           <artifactId>spock-core</artifactId>
           <version>1.1-groovy-2.4</version>
@@ -105,7 +111,7 @@
     <dependency>
       <groupId>iix</groupId>
       <artifactId>iixToolkit</artifactId>
-      <version>4.1</version>
+      <version>4.2</version>
     </dependency>
     <dependency>
       <groupId>org.postgresql</groupId>

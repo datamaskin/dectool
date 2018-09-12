@@ -1,7 +1,9 @@
 package iix.util
 
 import groovy.util.logging.Slf4j
+import picocli.CommandLine
 import spock.lang.Specification
+import util.toolkit.stringtools.Trimmer
 import util.toolkit.stringtools.exceptions.ClientErrorException
 import util.toolkit.stringtools.exceptions.FpeDispatcherException
 import util.toolkit.stringtools.exceptions.InitializationException
@@ -26,26 +28,21 @@ class DecToolCommandTest extends Specification {
         given:
         DecToolCommand dtc = new DecToolCommand()
 
-        String db_from =  "MVR"
-        String db_to = "MVR_IN"
-        int size = 0
-
         String s = ""
 
         s = "DBConnect.iiX.MVR_IN.TEST"
 
         Connection to_conn = dtc.getConnection(s)
 
-        to_conn.setAutoCommit(true);
+        to_conn.setAutoCommit(true)
 
-//        String reqIds = "select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enh sd on (req.request_id = sd.request_id)"
-        StringBuilder reqIds = new StringBuilder("select * from mvr.d_mvr_requests req join mvr.d_mvr_state_data_enc sd on (req.request_id = sd.request_id) where req.state = 'MS' and sd.line_no = 1 and req.product_code != '31'")
+        StringBuilder reqIds = new StringBuilder("select request_id from mvr.d_mvr_requests req where req.state = 'MS' and req.request_id = '692367523'")
 
         StringBuilder deleteReqIds = new StringBuilder("delete from mvr.d_mvr_state_data_enh where request_id in ")
 
         Statement stmt = null
         ResultSet rs = null
-        List<Integer> l_reqIds = new ArrayList<>()
+
         int fetchSize = 5
         reqIds.append(" FETCH FIRST ")
         reqIds.append(fetchSize)
@@ -74,7 +71,7 @@ class DecToolCommandTest extends Specification {
 
         PreparedStatement deletePrep = null
 
-        boolean closed = false;
+        boolean closed = false
         try {
             deletePrep = to_conn.prepareStatement(_str)
             affectedRows = deletePrep.executeUpdate(_str)
@@ -96,7 +93,7 @@ class DecToolCommandTest extends Specification {
 
     def "Test where clauses to be put on the DecTool CLI to fetch the request_id(s) of the encrypted data, decrypt and insert into enh" () {
         given:
-        StringBuilder encSelect = new StringBuilder("select sd.* from mvr.d_mvr_state_data_enc sd join mvr.d_mvr_requests req on sd.request_id = req.request_id where ")
+        StringBuilder encSelect = new StringBuilder("select * from mvr.d_mvr_state_data_enc where ")
 
             // working
 //        String where = " req.state = 'MS'\n" +
@@ -121,9 +118,7 @@ class DecToolCommandTest extends Specification {
 //                "   and sd.time_report_start = (select max(time_report_start) from mvr.d_mvr_state_data_enc sm where sm.request_id = req.request_id)"
 
         // working
-        String where = "req.state = 'MS'\n" +
-                "  and sd.line_no = 1\n" +
-                "  and req.product_code != '31'"
+        String where = "request_id = '692367523'"
 
         DecToolCommand dtc = new DecToolCommand()
 
@@ -149,11 +144,11 @@ class DecToolCommandTest extends Specification {
         String recType = ""
         int fetchSize =  5
         encSelect.append(where)
-        encSelect.append("FETCH FIRST ")
+        encSelect.append(" FETCH FIRST ")
         encSelect.append(fetchSize)
         encSelect.append(" ROWS ONLY")
         int affectedRows = 0
-        StringBuilder mvr_state =  new StringBuilder("insert into MVR.D_MVR_STATE_DATA_ENH(request_id, time_report_start, line_no, state, data, time_report_start_ts,record_type) values(?,?,?,?,?,?,?)");
+        StringBuilder mvr_state =  new StringBuilder("insert into MVR.D_MVR_STATE_DATA_ENH(request_id, time_report_start, line_no, state, data, time_report_start_ts,record_type) values(?,?,?,?,?,?,?)")
 
         boolean wrongdelimiter = false
         try {
@@ -174,8 +169,7 @@ class DecToolCommandTest extends Specification {
                 byte[] dec = new byte[4000]
 
                 try {
-                    TrimmerSingleton ts = TrimmerSingleton.getInstance()
-                    dec = ts.trimmer.trailing("IIX", _data)
+                    dec = DecToolCommand.getTrimmer().trailing("IIX", _data)
                     System.out.println(new String(dec))
                 } catch (InitializationException e) {
                     e.printStackTrace()
@@ -228,12 +222,17 @@ class DecToolCommandTest extends Specification {
 
     def "Test query to fetch request_id(s) against a where clause" () {
         given:
-//        StringBuilder encSelect = new StringBuilder("select sd.* from mvr.d_mvr_state_data_enc sd join mvr.d_mvr_requests req on sd.request_id = req.request_id where ")
-        String where = "req.state = 'MS'  and sd.line_no = 1 and req.product_code != '31'"
+
+        String where = "req.state = 'MS' and req.request_id != '692367523'"
         DecToolCommand dtc = new DecToolCommand()
+        String db_from =  "MVR"
+        String db_to = "MVR_IN"
+        String from_env = "TEST"
 
         List<Integer> l = new ArrayList<>()
-        l = dtc.getReqIds(where)
+        Connection fromConnection = dtc.getConnection("DBConnect.iiX.MVR.TEST")
+        dtc.fsize = 5
+        l = dtc.getReqIds(fromConnection, where)
         log.debug("Request ids array:")
         for (int i = 0; i < l.size(); i++) {
             log.debug(l.get(i).toString())
@@ -244,13 +243,26 @@ class DecToolCommandTest extends Specification {
 
     }
 
-    def "Test the Trimmer instance for processing TrimConfig.properties correctly using TrimmerSingleton" () {
+    def "Test the Trimmer instance for processing " () {
         given:
-        TrimmerSingleton ts = TrimmerSingleton.getInstance()
-        log.debug("TrimmerSingleton: `${ts}`")
+        Trimmer t = DecToolCommand.getTrimmer()
+        log.debug("Trimmer: `${t}`")
 
         expect:
-        ts
+        t
+    }
+
+    def "Test the picoCLI default args for non-null values" () {
+        given:
+
+        DecToolCommand dtc = new DecToolCommand()
+        CommandLine cl = new CommandLine(DecToolCommand.class)
+        List<CommandLine> l = cl.parse("-e", "TEST","-f","MVR","-t","MVR_IN","-E","TEST","-s","10","-c","5","req.state='MS' and req.request_id='692367523'" )
+
+        expect:
+        l.size() > 0
+        l.get(0).getCommandSpec().options().get(0).initialValue() == "MVR"
+        l.get(0).getCommandSpec().options().get(1).initialValue() == "TEST"
     }
 
 }

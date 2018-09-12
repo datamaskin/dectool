@@ -19,7 +19,7 @@ with no command line arguments (help message is displayed)
  The where clause must have a leading double dash (--) without parentheses to signal the end of named options.
  The tool assumes and consumes everything after the double dash as where clause.
  Example command line:
- `java -jar dectool-1.0-SNAPSHOT.jar -e TEST -f MVR -t MVR_IN -E TEST -s 5 -- sd.line_no = 1 and sd.record_type = 'R' and sd.time_report_start = (select max(time_report_start) from mvr.d_mvr_state_data_enc sm where sm.request_id = req.request_id)
+ `java -jar dectool-1.0.jar -e TEST -f MVR -t MVR_IN -E TEST -s 400 -c 5 -- req.state='MS' and req.product_code!='31'
 `
  
 ####Git clone and build
@@ -76,20 +76,18 @@ with no command line arguments (help message is displayed)
  #TEST
  #-f
  #MVR
- #-o
- #..\..\..\..\..\..\utils\ora_messenger.xml
  #-t
  #MVR_IN
  #-E
  #TEST
  #-s
- #5
+ #400
+ #-c
+ #20
  #--
- #sd.line_no=1
+ #"req.state='MS'"
  #and
- #"sd.record_type='R'"
- #and
- #'sd.time_report_start=(select max(time_report_start) from mvr.d_mvr_state_data_enc sm where sm.request_id=req.request_id)'
+ #"req.product_code!='31'"
 ```
 
 ######Running the tests

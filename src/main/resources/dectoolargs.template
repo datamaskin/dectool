@@ -8,8 +8,6 @@
 #TEST
 #-f
 #MVR
-#-o
-#..\..\..\..\..\..\utils\ora_messenger.xml
 #-t
 #MVR_IN
 #-E

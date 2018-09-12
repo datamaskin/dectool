@@ -7,7 +7,6 @@ with no command line arguments (help message is displayed)
 * The defaults (and required values) are:
   * Both to and from DB names
   * Both to and from environments
-  * Path to ora_messenger.xml
   * Path to dectoolargs file (see example below)
   * Transaction count before commit
   * Fetch first size
@@ -20,14 +19,14 @@ with no command line arguments (help message is displayed)
  The where clause must have a leading double dash (--) without parentheses to signal the end of named options.
  The tool assumes and consumes everything after the double dash as where clause.
  Example command line:
- `java -jar dectool-1.0-SNAPSHOT.jar -e TEST -f MVR -o ..\..\..\..\..\..\utils\ora_messenger.xml -t MVR_IN -E TEST -s 5 -- sd.line_no = 1 and sd.record_type = 'R' and sd.time_report_start = (select max(time_report_start) from mvr.d_mvr_state_data_enc sm where sm.request_id = req.request_id)
+ `java -jar dectool-1.0-SNAPSHOT.jar -e TEST -f MVR -t MVR_IN -E TEST -s 5 -- sd.line_no = 1 and sd.record_type = 'R' and sd.time_report_start = (select max(time_report_start) from mvr.d_mvr_state_data_enc sm where sm.request_id = req.request_id)
 `
  
 ####Git clone and build
  Use git bash here in Explorer ostensibly right clicking your favorite directory.
  Run: `git clone ssh://git.iix.com/git/Common/dectool.git`
  
- To build the tool with the tests cases a copy of ora_messenger.xml must be placed in the Java resources directory with the following snippet:
+ To build the tool with the tests cases a copy of ora_messenger.xml must be accessible to the toolkit with the following snippet:
  ```
  <TEST>
          <TnsName>oratestm.world</TnsName>

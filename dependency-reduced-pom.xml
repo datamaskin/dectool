@@ -11,6 +11,10 @@
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.7.0</version>
           <configuration>
+            <excludes>
+              <exclude>**/log4j.properties</exclude>
+              <exclude>**/logback.xml</exclude>
+            </excludes>
             <source>${jdk.version}</source>
             <target>${jdk.version}</target>
             <compilerArgs>

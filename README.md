@@ -48,11 +48,30 @@ with no command line arguments (help message is displayed)
  * To use a CLI input file please see the dectool args template at: `src/main/resources/dectoolargs.template`
  * Assuming the minimal requirements the user should be able to execute the following:
  
- `java -jar target/dectool-0.1.jar @src/main/resources/dectoolargs`
+ `java -jar -Dlogback.configurationFile=c:\utils\logback.xml target/dectool-0.1.jar @src/main/resources/dectoolargs`
  * Use the dectoolargs.template as just that: a template.
  * Name the file to reflect the where clause or dbname and environment used.
  * There is a reference in the template file and repeated here for instructions on how to construct an input file.
  `https://picocli.info/#AtFiles`
+ 
+ ######logback.xml
+ ```
+ <configuration>
+ 
+     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+         <!-- encoders are assigned the type
+              ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+         <encoder>
+             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+         </encoder>
+     </appender>
+ 
+     <root level="info">
+         <appender-ref ref="STDOUT" />
+     </root>
+     <logger name="iix.util.DecToolCommand" level="INFO" />
+ </configuration>
+ ```
  
  ######Tool creation and config
  Assuming sdkman is installed:

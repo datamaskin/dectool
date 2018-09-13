@@ -200,9 +200,13 @@ public class DecToolCommand implements Runnable {
         Statement stmt = null;
         ResultSet rs = null;
         encSelect.append(where);
-        encSelect.append(" FETCH FIRST ");
-        encSelect.append(fsize);
-        encSelect.append(" ROWS ONLY");
+
+        if (fsize > 0) {
+            encSelect.append(" FETCH FIRST ");
+            encSelect.append(fsize);
+            encSelect.append(" ROWS ONLY");
+        }
+
         List<Integer> l_reqids = new ArrayList<>();
 
         try {

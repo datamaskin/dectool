@@ -257,7 +257,7 @@ class DecToolCommandTest extends Specification {
 
         DecToolCommand dtc = new DecToolCommand()
         CommandLine cl = new CommandLine(DecToolCommand.class)
-        List<CommandLine> l = cl.parse("-e", "TEST","-f","MVR","-t","MVR_IN","-E","TEST","-s","10","-c","5","req.state='MS' and req.request_id='692367523'" )
+        List<CommandLine> l = cl.parse("-e", "TEST","-f","MVR","-t","MVR_IN","-E","TEST","-s","0","-c","5","req.state='MS' and req.request_id='692367523'" )
 
         expect:
         l.size() > 0

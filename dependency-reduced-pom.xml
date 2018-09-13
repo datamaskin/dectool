@@ -191,6 +191,19 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
+  <distributionManagement>
+    <repository>
+      <id>archiva.internal</id>
+      <name>iiX Internal Repository</name>
+      <url>http://archiva.iix.com/repository/internal</url>
+    </repository>
+    <snapshotRepository>
+      <uniqueVersion>false</uniqueVersion>
+      <id>archiva.snapshots</id>
+      <name>iiX Internal Snapshot Repository</name>
+      <url>http://archiva.iix.com/repository/snapshots</url>
+    </snapshotRepository>
+  </distributionManagement>
   <properties>
     <jdk.version>1.8</jdk.version>
     <exec.mainClass>iix.util.DecToolCommand</exec.mainClass>

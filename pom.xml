@@ -10,6 +10,19 @@
     <jdk.version>1.8</jdk.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
+  <distributionManagement>
+    <repository>
+      <id>archiva.internal</id>
+      <name>iiX Internal Repository</name>
+      <url>http://archiva.iix.com/repository/internal</url>
+    </repository>
+    <snapshotRepository>
+      <id>archiva.snapshots</id>
+      <name>iiX Internal Snapshot Repository</name>
+      <url>http://archiva.iix.com/repository/snapshots</url>
+      <uniqueVersion>false</uniqueVersion>
+    </snapshotRepository>
+  </distributionManagement>
   <repositories>
         <repository>
           <id>jcenter.bintray.com</id>

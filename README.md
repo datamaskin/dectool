@@ -48,7 +48,7 @@ with no command line arguments (help message is displayed)
  * To use a CLI input file please see the dectool args template at: `src/main/resources/dectoolargs.template`
  * Assuming the minimal requirements the user should be able to execute the following:
  
- `java -jar target/dectool-0.1.jar @src/main/resources/dectoolargs`
+ `java -jar -Dlogback.configurationFile=c:\utils\logback.xml target/dectool-0.1.jar @src/main/resources/dectoolargs`
  * Use the dectoolargs.template as just that: a template.
  * Name the file to reflect the where clause or dbname and environment used.
  * There is a reference in the template file and repeated here for instructions on how to construct an input file.

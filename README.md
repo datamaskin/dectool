@@ -54,6 +54,25 @@ with no command line arguments (help message is displayed)
  * There is a reference in the template file and repeated here for instructions on how to construct an input file.
  `https://picocli.info/#AtFiles`
  
+ ######logback.xml
+ ```
+ <configuration>
+ 
+     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+         <!-- encoders are assigned the type
+              ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+         <encoder>
+             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+         </encoder>
+     </appender>
+ 
+     <root level="info">
+         <appender-ref ref="STDOUT" />
+     </root>
+     <logger name="iix.util.DecToolCommand" level="INFO" />
+ </configuration>
+ ```
+ 
  ######Tool creation and config
  Assuming sdkman is installed:
  * JDK 1.8+ installed

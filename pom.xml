@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>iix.util</groupId>
   <artifactId>dectool</artifactId>
-  <version>0.4</version>
+  <version>0.5</version>
   <packaging>jar</packaging>
   <properties>
     <exec.mainClass>iix.util.DecToolCommand</exec.mainClass>
@@ -24,10 +24,10 @@
     </snapshotRepository>
   </distributionManagement>
   <repositories>
-        <!--<repository>
+        <repository>
           <id>jcenter.bintray.com</id>
           <url>https://jcenter.bintray.com</url>
-        </repository>-->
+        </repository>
       <repository>
         <id>internal</id>
         <name>iiX Internal Repository</name>
@@ -147,6 +147,11 @@
       <artifactId>groovy-eclipse-compiler</artifactId>
       <version>2.9.2-01</version>
     </dependency>
+    <!--<dependency>
+      <groupId>org.codehaus.groovy</groupId>
+      <artifactId>groovy-eclipse-batch</artifactId>
+      <version>2.4.15-01</version>
+    </dependency>-->
   </dependencies>
   <build>
     <plugins>
@@ -264,6 +269,18 @@
               </path>
             </annotationProcessorPaths>
           </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>org.codehaus.groovy</groupId>
+              <artifactId>groovy-eclipse-compiler</artifactId>
+              <version>2.9.3-01</version>
+            </dependency>
+            <dependency>
+              <groupId>org.codehaus.groovy</groupId>
+              <artifactId>groovy-eclipse-batch</artifactId>
+              <version>2.4.15-01</version>
+            </dependency>
+          </dependencies>
         </plugin>
       </plugins>
     </pluginManagement>

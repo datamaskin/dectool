@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>iix.util</groupId>
   <artifactId>dectool</artifactId>
-  <version>0.5</version>
+  <version>0.6</version>
   <packaging>jar</packaging>
   <properties>
     <exec.mainClass>iix.util.DecToolCommand</exec.mainClass>
@@ -194,11 +194,11 @@
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.7.0</version>
-        <configuration>
+        <!--<configuration>
           <compilerId>groovy-eclipse-compiler</compilerId>
-        </configuration>
+        </configuration>-->
         <executions>
-          <execution>
+          <!--<execution>
             <id>test-compile</id>
             <phase>process-test-sources</phase>
             <goals>
@@ -207,7 +207,7 @@
             <configuration>
               <compilerId>groovy-eclipse-compiler</compilerId>
             </configuration>
-          </execution>
+          </execution>-->
         </executions>
         <dependencies>
           <dependency>

@@ -124,10 +124,6 @@
   </build>
   <repositories>
     <repository>
-      <id>jcenter.bintray.com</id>
-      <url>https://jcenter.bintray.com</url>
-    </repository>
-    <repository>
       <id>internal</id>
       <name>iiX Internal Repository</name>
       <url>http://archiva.iix.com/repository/everything</url>

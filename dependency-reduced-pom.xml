@@ -3,25 +3,13 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>iix.util</groupId>
   <artifactId>dectool</artifactId>
-  <version>0.5</version>
+  <version>0.6</version>
   <build>
     <pluginManagement>
       <plugins>
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.7.0</version>
-          <dependencies>
-            <dependency>
-              <groupId>org.codehaus.groovy</groupId>
-              <artifactId>groovy-eclipse-compiler</artifactId>
-              <version>2.9.3-01</version>
-            </dependency>
-            <dependency>
-              <groupId>org.codehaus.groovy</groupId>
-              <artifactId>groovy-eclipse-batch</artifactId>
-              <version>2.4.15-01</version>
-            </dependency>
-          </dependencies>
           <configuration>
             <excludes>
               <exclude>**/log4j.properties</exclude>
@@ -83,16 +71,6 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.7.0</version>
         <dependencies>
-          <dependency>
-            <groupId>org.codehaus.groovy</groupId>
-            <artifactId>groovy-eclipse-compiler</artifactId>
-            <version>2.9.3-01</version>
-          </dependency>
-          <dependency>
-            <groupId>org.codehaus.groovy</groupId>
-            <artifactId>groovy-eclipse-batch</artifactId>
-            <version>2.4.15-01</version>
-          </dependency>
           <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-dbcp2</artifactId>

@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>iix.util</groupId>
   <artifactId>dectool</artifactId>
-  <version>0.2</version>
+  <version>0.3</version>
   <packaging>jar</packaging>
   <properties>
     <exec.mainClass>iix.util.DecToolCommand</exec.mainClass>
@@ -24,10 +24,10 @@
     </snapshotRepository>
   </distributionManagement>
   <repositories>
-        <repository>
+        <!--<repository>
           <id>jcenter.bintray.com</id>
           <url>https://jcenter.bintray.com</url>
-        </repository>
+        </repository>-->
       <repository>
         <id>internal</id>
         <name>iiX Internal Repository</name>

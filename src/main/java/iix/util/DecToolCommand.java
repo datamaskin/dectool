@@ -12,6 +12,7 @@ import picocli.CommandLine.Option;
 import util.toolkit.stringtools.Trimmer;
 import util.toolkit.stringtools.exceptions.*;
 
+import javax.persistence.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Member;
@@ -59,7 +60,20 @@ public class DecToolCommand implements Runnable {
     /*@Option(names = {"-v", "--verbose"}, description = "Tool description details")
     boolean verbose=false;*/
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     private static Trimmer trimmer = null;
+
+    public static byte[] hex2Byte(String s) {
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+                    + Character.digit(s.charAt(i+1), 16));
+        }
+        return data;
+    }
 
     static Trimmer getTrimmer() {
         if(trimmer == null) {
@@ -228,6 +242,11 @@ public class DecToolCommand implements Runnable {
         }
 
         return l_reqids;
+    }
+
+    private byte[] getDec(int request_id) {
+        DecTool decTool = entityManager.find(DecTool.class, request_id);
+        return decTool.getDec();
     }
 
     private int updateDec(int request_id, Connection toConnection, Connection fromConnection, int commCnt) {

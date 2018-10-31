@@ -152,6 +152,18 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <dependency>
+      <groupId>net.bytebuddy</groupId>
+      <artifactId>byte-buddy</artifactId>
+      <version>1.8.22</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.objenesis</groupId>
+      <artifactId>objenesis</artifactId>
+      <version>2.6</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <dependencyManagement>
     <dependencies>
@@ -178,10 +190,10 @@
     </snapshotRepository>
   </distributionManagement>
   <properties>
-    <jdk.version>1.8</jdk.version>
+    <micronaut.version>1.0.0.M4</micronaut.version>
     <exec.mainClass>iix.util.DecToolCommand</exec.mainClass>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <micronaut.version>1.0.0.M4</micronaut.version>
+    <jdk.version>11</jdk.version>
   </properties>
 </project>
 

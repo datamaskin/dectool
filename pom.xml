@@ -6,7 +6,7 @@
   <packaging>jar</packaging>
   <properties>
     <exec.mainClass>iix.util.DecToolCommand</exec.mainClass>
-    <micronaut.version>1.0.0.M4</micronaut.version>
+    <micronaut.version>1.0.0</micronaut.version>
     <jdk.version>11</jdk.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
@@ -38,7 +38,7 @@
     <dependencies>
       <dependency>
         <groupId>io.micronaut</groupId>
-        <artifactId>bom</artifactId>
+        <artifactId>micronaut-bom</artifactId>
         <version>${micronaut.version}</version>
         <type>pom</type>
         <scope>import</scope>
@@ -48,7 +48,7 @@
   <dependencies>
         <dependency>
           <groupId>io.micronaut</groupId>
-          <artifactId>runtime</artifactId>
+          <artifactId>micronaut-runtime</artifactId>
           <scope>compile</scope>
         </dependency>
         <dependency>
@@ -58,29 +58,28 @@
         </dependency>
         <dependency>
           <groupId>io.micronaut.configuration</groupId>
-          <artifactId>picocli</artifactId>
+          <artifactId>micronaut-picocli</artifactId>
           <scope>compile</scope>
         </dependency>
         <dependency>
           <groupId>io.micronaut</groupId>
-          <artifactId>inject</artifactId>
+          <artifactId>micronaut-inject</artifactId>
           <scope>compile</scope>
         </dependency>
         <dependency>
           <groupId>io.micronaut</groupId>
-          <artifactId>inject-java</artifactId>
+          <artifactId>micronaut-validation</artifactId>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.micronaut</groupId>
+          <artifactId>micronaut-inject-java</artifactId>
           <scope>provided</scope>
         </dependency>
         <dependency>
           <groupId>ch.qos.logback</groupId>
           <artifactId>logback-classic</artifactId>
           <version>1.2.3</version>
-          <scope>runtime</scope>
-        </dependency>
-        <dependency>
-          <groupId>oracle.jdbc.12c</groupId>
-          <artifactId>ojdbc7</artifactId>
-          <version>12.1.0.1</version>
           <scope>runtime</scope>
         </dependency>
         <dependency>
@@ -97,7 +96,7 @@
         </dependency>
         <dependency>
           <groupId>io.micronaut</groupId>
-          <artifactId>inject-groovy</artifactId>
+          <artifactId>micronaut-inject-groovy</artifactId>
           <scope>test</scope>
         </dependency>
         <dependency>
@@ -210,7 +209,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.7.0</version>
+        <version>3.8.0</version>
         <!--<configuration>
           <compilerId>groovy-eclipse-compiler</compilerId>
         </configuration>-->
@@ -281,7 +280,7 @@
             <annotationProcessorPaths>
               <path>
                 <groupId>io.micronaut</groupId>
-                <artifactId>inject-java</artifactId>
+                <artifactId>micronaut-inject-java</artifactId>
                 <version>${micronaut.version}</version>
               </path>
             </annotationProcessorPaths>

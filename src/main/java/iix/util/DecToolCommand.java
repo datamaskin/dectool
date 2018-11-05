@@ -244,10 +244,10 @@ public class DecToolCommand implements Runnable {
         return l_reqids;
     }
 
-    private byte[] getDec(int request_id) {
+    /*private byte[] getDec(int request_id) {
         DecTool decTool = entityManager.find(DecTool.class, request_id);
         return decTool.getDec();
-    }
+    }*/
 
     private int updateDec(int request_id, Connection toConnection, Connection fromConnection, int commCnt) {
 

@@ -1,7 +1,6 @@
 package iix.util
 
 import groovy.util.logging.Slf4j
-import oracle.sql.CLOB
 import picocli.CommandLine
 import spock.lang.Specification
 import util.toolkit.stringtools.Trimmer
@@ -14,7 +13,6 @@ import util.toolkit.stringtools.exceptions.NullInputException
 import util.toolkit.stringtools.exceptions.TimeoutException
 import util.toolkit.stringtools.exceptions.WrongDelimiterException
 
-import javax.persistence.EntityManager
 import javax.sql.rowset.serial.SerialBlob
 import java.sql.Blob
 import java.sql.Connection
@@ -29,8 +27,6 @@ import java.sql.Timestamp
 class DecToolCommandTest extends Specification {
 
     private DecToolCommand decToolCommand
-
-    private EntityManager entityManager
 
     def "Stub (mock) DB test using byte[] input and String result against the Trimmer class" () {
         given: "A dectool instance with encrypted data"

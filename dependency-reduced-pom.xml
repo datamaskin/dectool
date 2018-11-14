@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>iix.util</groupId>
   <artifactId>dectool</artifactId>
-  <version>0.10</version>
+  <version>0.11</version>
   <build>
     <pluginManagement>
       <plugins>

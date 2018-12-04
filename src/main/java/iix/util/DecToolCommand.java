@@ -55,8 +55,8 @@ public class DecToolCommand implements Runnable {
     @Option(names = {"-c", "-commitCount"}, paramLabel = "commitcnt", description = "The request_id transaction count before commit (default: ${DEFAULT-VALUE})")
     static int commitcnt = 500;
 
-    @Option(names = {"-m", "-multiple"}, description = "Query multiple line no. per request id (default: ${DEFAULT-VALUE})")
-    static char multiple = 'n';
+    @Option(names = {"-m", "-multiple"}, paramLabel = "multiple", arity = "0..1", description = "Query multiple line no. per request id (default: ${DEFAULT-VALUE})")
+    static boolean multiple = false;
 
     /*@Option(names = {"-v", "--verbose"}, description = "Tool description details")
     boolean verbose=false;*/
@@ -165,7 +165,7 @@ public class DecToolCommand implements Runnable {
         DecToolCommand.db_to = parseResult.matchedOptionValue('t', "MVR");
         DecToolCommand.env_to = parseResult.matchedOptionValue('E', "TEST");
         DecToolCommand.commitcnt = parseResult.matchedOptionValue('c', 500);
-        DecToolCommand.multiple = parseResult.matchedOptionValue('m', 'n');
+        DecToolCommand.multiple = parseResult.matchedOptionValue('m', false);
     }
 
     public static void main(String[] args) throws Exception {
@@ -209,7 +209,7 @@ public class DecToolCommand implements Runnable {
         return conn;
     }
 
-    List<Integer> getReqIds(Connection connection, String where) {
+    Map<Integer, List<Integer>> getReqIds(Connection connection, String where) {
 
         StringBuilder encSelect = new StringBuilder("select * from mvr.d_mvr_requests req where ");
         StringBuilder _encSelect = new StringBuilder("select * from mvr.d_mvr_state_data_enc req where ");
@@ -223,7 +223,7 @@ public class DecToolCommand implements Runnable {
         encSelect.append(where);
         _encSelect.append(where);
 
-        if (DecToolCommand.multiple == 'y') {
+        if (DecToolCommand.multiple) {
             _encSelect.append(" and line_no >= 1");
         }
 
@@ -233,13 +233,14 @@ public class DecToolCommand implements Runnable {
             encSelect.append(" ROWS ONLY");
         }
 
+        Map<Integer, List<Integer>> idsNos = new HashMap<Integer, List<Integer>>();
         List<Integer> l_reqids = new ArrayList<>();
         List<Integer> l_lineno = new ArrayList<>();
         int count = 0;
 
         try {
             stmt = connection.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_READ_ONLY);
-            if (multiple == 'y') {
+            if (multiple) {
                 rs = stmt.executeQuery(_encSelect.toString());
             } else {
                 rs = stmt.executeQuery(encSelect.toString());
@@ -267,8 +268,10 @@ public class DecToolCommand implements Runnable {
                 System.exit(-5);
             }
         }
+        idsNos.put(l_reqids.get(0), l_lineno);
 
-        return l_reqids;
+//        return l_reqids;
+        return idsNos;
     }
 
     /*private byte[] getDec(int request_id) {
@@ -276,12 +279,12 @@ public class DecToolCommand implements Runnable {
         return decTool.getDec();
     }*/
 
-    private int updateDec(int request_id, Connection toConnection, Connection fromConnection, int commCnt) {
+    private int updateDec(int request_id, int l_no, Connection toConnection, Connection fromConnection, int commCnt) {
 
         StringBuilder encSelect = new StringBuilder("select * from mvr.d_mvr_state_data_enc where request_id = " + Integer.toString(request_id));
 
-        if (multiple == 'y') {
-            encSelect.append(" and line_no >= 1");
+        if (multiple) {
+            encSelect.append(" and line_no = " + l_no);
         }
 
         int affectedRows = 0;
@@ -369,12 +372,12 @@ public class DecToolCommand implements Runnable {
         return s.toString();
     }
 
-    private int deleteDec(int request_id, Connection connection, int commCnt) {
+    private int deleteDec(int request_id, int line_no, Connection connection, int commCnt) {
 
         StringBuilder deleteReqId = new StringBuilder("delete from mvr.d_mvr_state_data_enh where request_id = " + Integer.toString(request_id));
 
-        if (multiple == 'y') {
-            deleteReqId.append(" and line_no >= 1");
+        if (multiple) {
+            deleteReqId.append(" and line_no = " + line_no);
         }
 
         try {
@@ -426,12 +429,16 @@ public class DecToolCommand implements Runnable {
                 toConnection = getConnection(getDbString(db_to,env_to));
                 fromConnection = getConnection(getDbString(db_from,env_from));
 
-                List<Integer> rIds = hwc.getReqIds(fromConnection,strtmp);
+                Map<Integer, List<Integer>> idsNos = hwc.getReqIds(fromConnection,strtmp);
                 int i = 0;
 
-                for (int rId: rIds) {
-                    deletedRows += hwc.deleteDec(rId, toConnection, commitcnt);
-                    affectedRows += hwc.updateDec(rId,toConnection, fromConnection, commitcnt);
+                for (Map.Entry<Integer, List<Integer>> entry : idsNos.entrySet()) {
+                    Integer rId = entry.getKey();
+                    List<Integer> lNos = entry.getValue();
+                    for (Integer lNo:lNos) {
+                        deletedRows += hwc.deleteDec(rId, lNo, toConnection, commitcnt);
+                        affectedRows += hwc.updateDec(rId, lNo, toConnection, fromConnection, commitcnt);
+                    }
                     i++;
                     if(i >= commitcnt) {
                         toConnection.commit();

@@ -20,27 +20,19 @@ import java.sql.*;
 import java.sql.Date;
 import java.util.*;
 
-/*@Command(name = "DecToolCommand",
-        header = {
-                "@|green  __                ___      |@",
-                "@|green |  \\ _ _ _   _ |_   | _  _ ||@",
-                "@|green |__/(-(_| \\/|_)|_   |(_)(_)||@",
-                "@|green           / |               |@"},
-        description = "dectool", mixinStandardHelpOptions = true, version = "0.1")*/
-
 @Command(name = "DecToolCommand",
         header = {
                 "@|green  __                ___      |@",
                 "@|green |  \\ _ _ _   _ |_   | _  _ ||@",
                 "@|green |__/(-(_| \\/|_)|_   |(_)(_)||@",
                 "@|green           / |               |@"},
-        description = "dectool: decrypts using @args file and path (see README.md) ", version = "0.1")
+        description = "dectool: decrypts using @args file and path (see README.md) ", version = "0.11")
 public class DecToolCommand implements Runnable {
 
-    @Option(names = {"-f", "--from "}, paramLabel = "db_from", description = "The database to read from  (default: ${DEFAULT-VALUE})", required = true)
+    @Option(names = {"-f", "-from "}, paramLabel = "db_from", description = "The database to read from  (default: ${DEFAULT-VALUE})", required = true)
     static String db_from = "MVR";
 
-    @Option(names = {"-e", "--env_from"}, paramLabel = "env_from", description = "The environment of the source database (default: ${DEFAULT-VALUE})", required = true)
+    @Option(names = {"-e", "-env_from"}, paramLabel = "env_from", description = "The environment of the source database (default: ${DEFAULT-VALUE})", required = true)
     static String env_from = "TEST";
 
     @Option(names = {"-t", "-to"}, paramLabel = "db_to", description = "The database to write to", required = true)
@@ -58,7 +50,10 @@ public class DecToolCommand implements Runnable {
     @Option(names = {"-m", "-multiple"}, paramLabel = "multiple", arity = "0..1", description = "Query multiple line no. per request id (default: ${DEFAULT-VALUE})")
     static boolean multiple = false;
 
-    /*@Option(names = {"-v", "--verbose"}, description = "Tool description details")
+    @Option(names = {"-p", "-path"}, paramLabel = "trimpath", description = "Set the Trimmer path envvar: TRIM_CONFIG_PATH")
+    static String trimpath = "c:\\utils\\TrimConfig.properties";
+
+    /*@Option(names = {"-v", "-verbose"}, arity = "0..1", description = "Tool description details")
     boolean verbose=false;*/
 
     private static Trimmer trimmer = null;
@@ -166,6 +161,7 @@ public class DecToolCommand implements Runnable {
         DecToolCommand.env_to = parseResult.matchedOptionValue('E', "TEST");
         DecToolCommand.commitcnt = parseResult.matchedOptionValue('c', 500);
         DecToolCommand.multiple = parseResult.matchedOptionValue('m', false);
+        DecToolCommand.trimpath = parseResult.matchedOptionValue('p', "c:\\utils\\TrimConfig.properties");
     }
 
     public static void main(String[] args) throws Exception {
@@ -177,13 +173,7 @@ public class DecToolCommand implements Runnable {
                 System.out.println(parseResult.matchedOption('s'));
                 System.out.println(parseResult.originalArgs());
                 getOptions(parseResult);
-                /*DecToolCommand.fsize = parseResult.matchedOptionValue('s', 100);
-                DecToolCommand.db_from = parseResult.matchedOptionValue('f', "MVR");
-                DecToolCommand.env_from = parseResult.matchedOptionValue('e', "TEST");
-                DecToolCommand.db_to = parseResult.matchedOptionValue('t', "MVR");
-                DecToolCommand.env_to = parseResult.matchedOptionValue('E', "TEST");
-                DecToolCommand.commitcnt = parseResult.matchedOptionValue('c', 500);
-                DecToolCommand.multiple = parseResult.matchedOptionValue('m', true);*/
+
                 System.out.println("Matched fsize value: " + fsize);
                 Map env = new HashMap();
                 env.put("TRIM_CONFIG_PATH","c:\\utils\\TrimConfig.properties");

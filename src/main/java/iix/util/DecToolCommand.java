@@ -17,17 +17,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-/*@Command(name = "DecToolCommand",
-        header = {
-                "@|green  __                ___      |@",
-                "@|green |  \\ _ _ _   _ |_   | _  _ ||@",
-                "@|green |__/(-(_| \\/|_)|_   |(_)(_)||@",
-                "@|green           / |               |@"},
-        description = "dectool", mixinStandardHelpOptions = true, version = "0.1")*/
+import java.sql.Date;
+import java.util.*;
 
 @Command(name = "DecToolCommand",
         header = {
@@ -35,13 +26,13 @@ import java.util.List;
                 "@|green |  \\ _ _ _   _ |_   | _  _ ||@",
                 "@|green |__/(-(_| \\/|_)|_   |(_)(_)||@",
                 "@|green           / |               |@"},
-        description = "dectool: decrypts using @args file and path (see README.md) ", version = "0.1")
+        description = "dectool: decrypts using @args file and path (see README.md) ", version = "0.11")
 public class DecToolCommand implements Runnable {
 
-    @Option(names = {"-f", "--from "}, paramLabel = "db_from", description = "The database to read from  (default: ${DEFAULT-VALUE})", required = true)
+    @Option(names = {"-f", "-from "}, paramLabel = "db_from", description = "The database to read from  (default: ${DEFAULT-VALUE})", required = true)
     static String db_from = "MVR";
 
-    @Option(names = {"-e", "--env_from"}, paramLabel = "env_from", description = "The environment of the source database (default: ${DEFAULT-VALUE})", required = true)
+    @Option(names = {"-e", "-env_from"}, paramLabel = "env_from", description = "The environment of the source database (default: ${DEFAULT-VALUE})", required = true)
     static String env_from = "TEST";
 
     @Option(names = {"-t", "-to"}, paramLabel = "db_to", description = "The database to write to", required = true)
@@ -56,7 +47,13 @@ public class DecToolCommand implements Runnable {
     @Option(names = {"-c", "-commitCount"}, paramLabel = "commitcnt", description = "The request_id transaction count before commit (default: ${DEFAULT-VALUE})")
     static int commitcnt = 500;
 
-    /*@Option(names = {"-v", "--verbose"}, description = "Tool description details")
+    @Option(names = {"-m", "-multiple"}, paramLabel = "multiple", arity = "0..1", description = "Query multiple line no. per request id (default: ${DEFAULT-VALUE})")
+    static boolean multiple = false;
+
+    @Option(names = {"-p", "-path"}, paramLabel = "trimpath", description = "Set the Trimmer path envvar: TRIM_CONFIG_PATH")
+    static String trimpath = "c:\\utils\\TrimConfig.properties";
+
+    /*@Option(names = {"-v", "-verbose"}, arity = "0..1", description = "Tool description details")
     boolean verbose=false;*/
 
     private static Trimmer trimmer = null;
@@ -163,6 +160,8 @@ public class DecToolCommand implements Runnable {
         DecToolCommand.db_to = parseResult.matchedOptionValue('t', "MVR");
         DecToolCommand.env_to = parseResult.matchedOptionValue('E', "TEST");
         DecToolCommand.commitcnt = parseResult.matchedOptionValue('c', 500);
+        DecToolCommand.multiple = parseResult.matchedOptionValue('m', false);
+        DecToolCommand.trimpath = parseResult.matchedOptionValue('p', "c:\\utils\\TrimConfig.properties");
     }
 
     public static void main(String[] args) throws Exception {
@@ -174,13 +173,11 @@ public class DecToolCommand implements Runnable {
                 System.out.println(parseResult.matchedOption('s'));
                 System.out.println(parseResult.originalArgs());
                 getOptions(parseResult);
-                /*DecToolCommand.fsize = parseResult.matchedOptionValue('s', 100);
-                DecToolCommand.db_from = parseResult.matchedOptionValue('f', "MVR");
-                DecToolCommand.env_from = parseResult.matchedOptionValue('e', "TEST");
-                DecToolCommand.db_to = parseResult.matchedOptionValue('t', "MVR");
-                DecToolCommand.env_to = parseResult.matchedOptionValue('E', "TEST");
-                DecToolCommand.commitcnt = parseResult.matchedOptionValue('c', 500);*/
+
                 System.out.println("Matched fsize value: " + fsize);
+                Map env = new HashMap();
+                env.put("TRIM_CONFIG_PATH","c:\\utils\\TrimConfig.properties");
+                setEnv(env);
             }
         } catch (CommandLine.ParameterException ex) { // command line arguments could not be parsed
             System.err.println(ex.getMessage());
@@ -202,14 +199,23 @@ public class DecToolCommand implements Runnable {
         return conn;
     }
 
-    List<Integer> getReqIds(Connection connection, String where) {
+    Map<Integer, List<Integer>> getReqIds(Connection connection, String where) {
 
-        StringBuilder encSelect = new StringBuilder("select request_id from mvr.d_mvr_requests req where ");
+        StringBuilder encSelect = new StringBuilder("select * from mvr.d_mvr_requests req where ");
+        StringBuilder _encSelect = new StringBuilder("select * from mvr.d_mvr_state_data_enc req where ");
+//        StringBuilder _encSelect = new StringBuilder("select * from mvr.d_mvr_state_data_enc where request_id = 659460165 and line_no >= 1");
+
         DecToolCommand dtc = new DecToolCommand();
 
         Statement stmt = null;
         ResultSet rs = null;
+
         encSelect.append(where);
+        _encSelect.append(where);
+
+        if (DecToolCommand.multiple) {
+            _encSelect.append(" and line_no >= 1");
+        }
 
         if (fsize > 0) {
             encSelect.append(" FETCH FIRST ");
@@ -217,16 +223,32 @@ public class DecToolCommand implements Runnable {
             encSelect.append(" ROWS ONLY");
         }
 
+        Map<Integer, List<Integer>> idsNos = new HashMap<Integer, List<Integer>>();
         List<Integer> l_reqids = new ArrayList<>();
+        List<Integer> l_lineno = new ArrayList<>();
+        int count = 0;
 
         try {
-            stmt = connection.createStatement();
-            rs = stmt.executeQuery(encSelect.toString());
-            while (rs.next()) {
-                l_reqids.add(rs.getInt("request_id"));
+            stmt = connection.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            if (multiple) {
+                rs = stmt.executeQuery(_encSelect.toString());
+            } else {
+                rs = stmt.executeQuery(encSelect.toString());
             }
+            while (rs.next()) {
+                count++;
+                l_lineno.add(rs.getInt("line_no"));
+                int reqTmp = rs.getInt("request_id");
+                if (!l_reqids.contains(reqTmp)) {
+                    l_reqids.add(reqTmp);
+                }
+            }
+            System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Number of rows : "+count+" <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
+            /*if (multiple == 'n' && count > 1) {
+                throw new InvalidInputException("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Multiple line_no found " + count + " for no multiple input >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+            }*/
         } catch (SQLException e) {
-            throw new RuntimeException("Failure to read the list of reqeust IDs to copy", e);
+            throw new RuntimeException("Failure to read the list of request IDs to copy", e);
         } finally {
             try {
                 if(rs != null) { rs.close(); };
@@ -236,8 +258,10 @@ public class DecToolCommand implements Runnable {
                 System.exit(-5);
             }
         }
+        idsNos.put(l_reqids.get(0), l_lineno);
 
-        return l_reqids;
+//        return l_reqids;
+        return idsNos;
     }
 
     /*private byte[] getDec(int request_id) {
@@ -245,9 +269,13 @@ public class DecToolCommand implements Runnable {
         return decTool.getDec();
     }*/
 
-    private int updateDec(int request_id, Connection toConnection, Connection fromConnection, int commCnt) {
+    private int updateDec(int request_id, int l_no, Connection toConnection, Connection fromConnection, int commCnt) {
 
-        String encSelect = "select * from mvr.d_mvr_state_data_enc where request_id = " + Integer.toString(request_id);
+        StringBuilder encSelect = new StringBuilder("select * from mvr.d_mvr_state_data_enc where request_id = " + Integer.toString(request_id));
+
+        if (multiple) {
+            encSelect.append(" and line_no = " + l_no);
+        }
 
         int affectedRows = 0;
         if (request_id >= 0) {
@@ -274,7 +302,7 @@ public class DecToolCommand implements Runnable {
 
             try {
                 stmt = fromConnection.createStatement();
-                rs = stmt.executeQuery(encSelect);
+                rs = stmt.executeQuery(encSelect.toString());
 
                 if (rs.next()) {
 
@@ -334,11 +362,14 @@ public class DecToolCommand implements Runnable {
         return s.toString();
     }
 
-    private int deleteDec(int request_id, Connection connection, int commCnt) {
-        String reqId = "select * from mvr.d_mvr_state_data_enc where request_id = " + Integer.toString(request_id);
+    private int deleteDec(int request_id, int line_no, Connection connection, int commCnt) {
 
+        StringBuilder deleteReqId = new StringBuilder("delete from mvr.d_mvr_state_data_enh where request_id = " + Integer.toString(request_id));
 
-        String deleteReqId = "delete from mvr.d_mvr_state_data_enh where request_id = " + Integer.toString(request_id);
+        if (multiple) {
+            deleteReqId.append(" and line_no = " + line_no);
+        }
+
         try {
             connection.setAutoCommit(false);
         } catch (SQLException e) {
@@ -350,13 +381,13 @@ public class DecToolCommand implements Runnable {
         int deletedRows = 0;
 
         try {
-            deletePrep = connection.prepareStatement(deleteReqId);
-            deletedRows = deletePrep.executeUpdate(deleteReqId);
+            deletePrep = connection.prepareStatement(deleteReqId.toString());
+            deletedRows = deletePrep.executeUpdate(deleteReqId.toString());
         } catch (SQLException e) {
             throw new RuntimeException(String.format("Failed to delete data for request_id $s",Integer.toString(request_id)),e);
         } finally {
             try {
-                if(deletePrep != null) { deletePrep.close(); };
+                if(deletePrep != null) { deletePrep.close(); }
             } catch (SQLException e) {
                 e.printStackTrace();
                 System.exit(-4);
@@ -374,13 +405,12 @@ public class DecToolCommand implements Runnable {
         if (where != null && !where.isEmpty() ) {
             StringBuilder _where = new StringBuilder();
             int j=0;
-            for (int i=0; i< where.size()-1; i++) {
+            for (int i=0; i < where.size(); i++) {
                 _where.append(where.get(i));
                 _where.append(" ");
-                j=i;
             }
-            j++;
-            _where.append(where.get(j));
+
+            String strtmp =_where.toString().trim();
 
             Connection toConnection = null;
             Connection fromConnection = null;
@@ -389,12 +419,16 @@ public class DecToolCommand implements Runnable {
                 toConnection = getConnection(getDbString(db_to,env_to));
                 fromConnection = getConnection(getDbString(db_from,env_from));
 
-                List<Integer> rIds = hwc.getReqIds(fromConnection,_where.toString());
+                Map<Integer, List<Integer>> idsNos = hwc.getReqIds(fromConnection,strtmp);
                 int i = 0;
 
-                for (int rId: rIds) {
-                    deletedRows += hwc.deleteDec(rId, toConnection, commitcnt);
-                    affectedRows += hwc.updateDec(rId,toConnection, fromConnection, commitcnt);
+                for (Map.Entry<Integer, List<Integer>> entry : idsNos.entrySet()) {
+                    Integer rId = entry.getKey();
+                    List<Integer> lNos = entry.getValue();
+                    for (Integer lNo:lNos) {
+                        deletedRows += hwc.deleteDec(rId, lNo, toConnection, commitcnt);
+                        affectedRows += hwc.updateDec(rId, lNo, toConnection, fromConnection, commitcnt);
+                    }
                     i++;
                     if(i >= commitcnt) {
                         toConnection.commit();
@@ -430,6 +464,33 @@ public class DecToolCommand implements Runnable {
         System.out.println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Deleted rows: " + deletedRows + ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
         System.out.println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Affected rows: " + affectedRows + ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 
+    }
+
+    private static void setEnv(Map<String, String> newenv) throws Exception {
+        try {
+            Class<?> processEnvironmentClass = Class.forName("java.lang.ProcessEnvironment");
+            Field theEnvironmentField = processEnvironmentClass.getDeclaredField("theEnvironment");
+            theEnvironmentField.setAccessible(true);
+            Map<String, String> env = (Map<String, String>) theEnvironmentField.get(null);
+            env.putAll(newenv);
+            Field theCaseInsensitiveEnvironmentField = processEnvironmentClass.getDeclaredField("theCaseInsensitiveEnvironment");
+            theCaseInsensitiveEnvironmentField.setAccessible(true);
+            Map<String, String> cienv = (Map<String, String>)     theCaseInsensitiveEnvironmentField.get(null);
+            cienv.putAll(newenv);
+        } catch (NoSuchFieldException e) {
+            Class[] classes = Collections.class.getDeclaredClasses();
+            Map<String, String> env = System.getenv();
+            for(Class cl : classes) {
+                if("java.util.Collections$UnmodifiableMap".equals(cl.getName())) {
+                    Field field = cl.getDeclaredField("m");
+                    field.setAccessible(true);
+                    Object obj = field.get(env);
+                    Map<String, String> map = (Map<String, String>) obj;
+                    map.clear();
+                    map.putAll(newenv);
+                }
+            }
+        }
     }
 
 }

@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>iix.util</groupId>
   <artifactId>dectool</artifactId>
-  <version>0.13-SNAPSHOT</version>
+  <version>0.14-SNAPSHOT</version>
   <packaging>jar</packaging>
   <properties>
     <exec.mainClass>iix.util.DecToolCommand</exec.mainClass>

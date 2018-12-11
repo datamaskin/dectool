@@ -237,7 +237,7 @@ public class DecToolCommand implements Runnable {
             }
             while (rs.next()) {
                 count++;
-                l_lineno.add(rs.getInt("line_no"));
+                if (multiple) l_lineno.add(rs.getInt("line_no"));
                 int reqTmp = rs.getInt("request_id");
                 if (!l_reqids.contains(reqTmp)) {
                     l_reqids.add(reqTmp);
